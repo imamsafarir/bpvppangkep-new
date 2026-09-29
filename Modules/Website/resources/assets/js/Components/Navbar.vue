@@ -273,11 +273,23 @@ onUnmounted(() => {
                         </Link>
                     </template>
 
+                    <!-- SP4N-LAPOR! Quick Link (Desktop) -->
+                    <a
+                        href="https://www.lapor.go.id/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="hidden lg:inline-flex items-center gap-1.5 bg-gradient-to-r from-red-600 via-red-500 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-[11px] px-3 py-1.5 rounded-full shadow-md shadow-red-900/20 hover:shadow-red-500/30 transition active:scale-95 cursor-pointer shrink-0 ml-2"
+                        title="SP4N-LAPOR! - Layanan Aspirasi dan Pengaduan Online Rakyat"
+                    >
+                        <i class="fas fa-bullhorn text-[11px]"></i>
+                        <span>LAPOR!</span>
+                    </a>
+
                     <!-- Install Super APP Quick Button (Desktop) -->
                     <button
                         @click="triggerInstallPrompt"
                         type="button"
-                        class="hidden xl:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-bold text-[11px] px-3 py-1.5 rounded-full shadow-sm transition active:scale-95 cursor-pointer shrink-0 ml-2"
+                        class="hidden xl:inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-bold text-[11px] px-3 py-1.5 rounded-full shadow-sm transition active:scale-95 cursor-pointer shrink-0 ml-1.5"
                         title="Pasang BPVP Pangkep - Super APP"
                     >
                         <i class="fas fa-download text-[10px]"></i>
@@ -339,8 +351,17 @@ onUnmounted(() => {
                 >
             </div>
 
-            <!-- Install Button inside mobile drawer -->
-            <div class="pt-3 mt-2 border-t border-white/10">
+            <!-- Quick Action Buttons inside mobile drawer -->
+            <div class="pt-3 mt-2 border-t border-white/10 flex flex-col gap-2">
+                <a
+                    href="https://www.lapor.go.id/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition active:scale-95 cursor-pointer"
+                >
+                    <i class="fas fa-bullhorn text-sm"></i>
+                    <span>Pengaduan Publik (SP4N-LAPOR!)</span>
+                </a>
                 <button
                     @click="
                         mobileMenu = false;

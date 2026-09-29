@@ -1,0 +1,225 @@
+/* ==========================================================================
+   Web Accessibility System Styles (WCAG 2.1 Compliant)
+   BPVP Pangkep Accessibility Engine
+   ========================================================================== */
+
+/* Official OpenDyslexic Webfonts (https://opendyslexic.org/) */
+@font-face {
+    font-family: "OpenDyslexic";
+    src:
+        url("/fonts/opendyslexic/opendyslexic-latin-400-normal.woff2")
+            format("woff2"),
+        url("/fonts/opendyslexic/opendyslexic-latin-400-normal.woff")
+            format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "OpenDyslexic";
+    src:
+        url("/fonts/opendyslexic/opendyslexic-latin-400-italic.woff2")
+            format("woff2"),
+        url("/fonts/opendyslexic/opendyslexic-latin-400-italic.woff")
+            format("woff");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "OpenDyslexic";
+    src:
+        url("/fonts/opendyslexic/opendyslexic-latin-700-normal.woff2")
+            format("woff2"),
+        url("/fonts/opendyslexic/opendyslexic-latin-700-normal.woff")
+            format("woff");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "OpenDyslexic";
+    src:
+        url("/fonts/opendyslexic/opendyslexic-latin-700-italic.woff2")
+            format("woff2"),
+        url("/fonts/opendyslexic/opendyslexic-latin-700-italic.woff")
+            format("woff");
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap;
+}
+
+/* 1. Official Dyslexia & Readable Font */
+html.ax-dyslexia-font,
+html.ax-dyslexia-font body,
+html.ax-dyslexia-font
+    *:not(
+        i,
+        [class*="fa-"],
+        [class^="fa-"],
+        svg,
+        svg *,
+        [data-lucide],
+        [data-lucide] *
+    ) {
+    font-family:
+        "OpenDyslexic",
+        "Lexend",
+        ui-sans-serif,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        sans-serif !important;
+    letter-spacing: 0.05em !important;
+    word-spacing: 0.14em !important;
+    line-height: 1.8 !important;
+}
+
+/* 2. Text Scaling */
+html.ax-text-large {
+    font-size: 115% !important;
+}
+html.ax-text-xlarge {
+    font-size: 130% !important;
+}
+
+/* 3. Text & Line Spacing */
+html.ax-text-spacing
+    *:not(
+        i,
+        [class*="fa-"],
+        [class^="fa-"],
+        svg,
+        svg *,
+        [data-lucide],
+        [data-lucide] *
+    ) {
+    letter-spacing: 0.12em !important;
+    word-spacing: 0.25em !important;
+    line-height: 2.1 !important;
+}
+
+/* 4. Link Underlining & Highlight */
+html.ax-force-underline a:not(#ax-widget-container, #ax-widget-container *) {
+    text-decoration: underline 2.5px #f59e0b !important;
+    text-underline-offset: 4px !important;
+    font-weight: 600 !important;
+}
+
+/* 5. Big High-Contrast Cursor */
+html.ax-big-cursor,
+html.ax-big-cursor * {
+    cursor:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cpath d='M4 4 L18 40 L24 26 L38 22 Z' fill='%23000000' stroke='%23ffffff' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E"),
+        auto !important;
+}
+html.ax-big-cursor a,
+html.ax-big-cursor button,
+html.ax-big-cursor [role="button"],
+html.ax-big-cursor input,
+html.ax-big-cursor select,
+html.ax-big-cursor textarea,
+html.ax-big-cursor a *,
+html.ax-big-cursor button * {
+    cursor:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cpath d='M4 4 L18 40 L24 26 L38 22 Z' fill='%232563eb' stroke='%23ffffff' stroke-width='3' stroke-linejoin='round'/%3E%3C/svg%3E"),
+        pointer !important;
+}
+
+/* 6. Pause / Disable Animations */
+html.ax-stop-animations,
+html.ax-stop-animations *,
+html.ax-stop-animations *::before,
+html.ax-stop-animations *::after {
+    animation: none !important;
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition: none !important;
+    transition-duration: 0.001s !important;
+    scroll-behavior: auto !important;
+}
+
+/* 7. High Contrast Mode (Dark & High-Vis Yellow/Cyan) */
+html.ax-high-contrast {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+html.ax-high-contrast body {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+html.ax-high-contrast
+    *:not(
+        #ax-widget-container,
+        #ax-widget-container *,
+        #ax-reading-line,
+        #ax-reading-line *
+    ) {
+    background-color: #000000 !important;
+    color: #ffff00 !important;
+    border-color: #ffffff !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+html.ax-high-contrast a:not(#ax-widget-container *, #ax-reading-line *) {
+    color: #00ffff !important;
+    text-decoration: underline !important;
+}
+html.ax-high-contrast button:not(#ax-widget-container *, #ax-reading-line *) {
+    background-color: #111827 !important;
+    color: #38bdf8 !important;
+    border: 2px solid #38bdf8 !important;
+}
+html.ax-high-contrast img:not(#ax-widget-container *),
+html.ax-high-contrast video {
+    filter: contrast(120%) brightness(105%) !important;
+}
+
+/* 8. Color Blindness Filters (SVG-Powered) */
+html.ax-protanopia {
+    filter: url("#ax-filter-protanopia") !important;
+}
+html.ax-deuteranopia {
+    filter: url("#ax-filter-deuteranopia") !important;
+}
+html.ax-tritanopia {
+    filter: url("#ax-filter-tritanopia") !important;
+}
+html.ax-monochrome {
+    filter: grayscale(100%) !important;
+}
+html.ax-invert {
+    filter: invert(100%) hue-rotate(180deg) !important;
+    background-color: #000000 !important;
+}
+/* Re-invert media so photos and videos look natural in invert mode */
+html.ax-invert img,
+html.ax-invert video,
+html.ax-invert iframe,
+html.ax-invert picture,
+html.ax-invert canvas,
+html.ax-invert #ax-widget-container,
+html.ax-invert #ax-tts-bar {
+    filter: invert(100%) hue-rotate(180deg) !important;
+}
+html.ax-sepia {
+    filter: sepia(90%) !important;
+}
+
+/* 9. Interactive Screen Reader (TTS) Highlighting */
+.ax-tts-speaking {
+    outline: 3px solid #2563eb !important;
+    outline-offset: 4px !important;
+    background-color: rgba(37, 99, 235, 0.18) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 0 16px rgba(37, 99, 235, 0.4) !important;
+    transition: all 0.2s ease !important;
+}
+html.ax-screen-reader-mode
+    *:not(#ax-widget-container, #ax-widget-container *):hover {
+    cursor: help !important;
+}
