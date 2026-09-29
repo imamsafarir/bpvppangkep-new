@@ -5,14 +5,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title inertia>{{ config('app.name', 'Laravel') }}</title>
-
     @php
         $siteSettings = \Modules\Website\Models\WebsiteSetting::first();
+        $siteName = $siteSettings?->website_name ?? config('app.name', 'BPVP Pangkep');
+        if (empty($siteName) || $siteName === 'Laravel') {
+            $siteName = 'BPVP Pangkep';
+        }
         $faviconPath = $siteSettings?->favicon_path;
         $faviconUrl = $faviconPath ? asset('storage/' . $faviconPath) : asset('favicon.ico');
         $faviconVersion = $siteSettings?->updated_at?->timestamp ?? time();
     @endphp
+
+    <title inertia>{{ $siteName }}</title>
     <link rel="icon" type="image/x-icon" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
     <link rel="icon" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">
     <link rel="shortcut icon" href="{{ $faviconUrl }}?v={{ $faviconVersion }}">

@@ -8,7 +8,12 @@ import { initPwa } from "./pwa";
 initPwa();
 
 createInertiaApp({
-    title: (title) => `${title} - ${import.meta.env.VITE_APP_NAME ?? "App"}`,
+    title: (title) => {
+        const appName = import.meta.env.VITE_APP_NAME || "BPVP Pangkep";
+        if (!title) return appName;
+        if (title.toLowerCase().includes(appName.toLowerCase())) return title;
+        return `${title} - ${appName}`;
+    },
     resolve: (name) => {
         if (name.includes("::")) {
             const [module, page] = name.split("::");
