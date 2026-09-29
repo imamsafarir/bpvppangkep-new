@@ -1,0 +1,11 @@
+{
+    "name": "Shortlink",
+    "alias": "shortlink",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Shortlink\\Providers\\ShortlinkServiceProvider"
+    ],
+    "files": []
+}

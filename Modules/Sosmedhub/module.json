@@ -1,0 +1,11 @@
+{
+    "name": "Sosmedhub",
+    "alias": "sosmedhub",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Sosmedhub\\Providers\\SosmedhubServiceProvider"
+    ],
+    "files": []
+}
