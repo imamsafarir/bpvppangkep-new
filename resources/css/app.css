@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "./accessibility.css";
 
+/* Force class-based dark mode so OS dark mode does not force dark theme automatically */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 @source '../views/**/*.blade.php';

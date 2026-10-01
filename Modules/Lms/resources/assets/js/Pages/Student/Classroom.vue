@@ -42,7 +42,7 @@ const props = defineProps({
     },
 });
 
-// Selected Path Tab: Always default to Jalur 1 ('zoom')
+// Selected Path Tab: Always default to Tab 1 ('zoom')
 const selectedPath = ref("zoom");
 
 // Multi-day & Path Gating Rules
@@ -126,12 +126,16 @@ const isModuleAttended = (moduleId, dayNum) => {
     return false;
 };
 
-// Jalur 2 visibility rule:
-// 1. If multi-day: Jalur 2 is immediately visible/open from the beginning.
-// 2. If single-day: Jalur 2 MUST NOT be visible initially. It ONLY becomes visible after student attends in Jalur 1 (or if session has ended / self-study unlocked).
+// Tab 2 visibility rule:
+// 1. If multi-day: Tab 2 is immediately visible/open from the beginning.
+// 2. If single-day: Tab 2 MUST NOT be visible initially. It ONLY becomes visible after student attends in Tab 1, or if scheduled session has ended / self-study unlocked.
 const isJalur2Visible = computed(() => {
     if (isMultiDay.value) return true;
-    return hasAttendedAny.value || Boolean(props.course.is_self_study_unlocked);
+    return (
+        hasAttendedAny.value ||
+        Boolean(props.course.is_self_study_unlocked) ||
+        isSchedulePassed.value
+    );
 });
 
 const currentDayNumber = computed(() => {
@@ -164,6 +168,132 @@ const isModuleLocked = (mod, index) => {
     const modDay = getModuleDayNumber(mod, index);
     return modDay > currentDayNumber.value;
 };
+
+// Real-time ticking clock for exact reactive schedule evaluation
+const currentTime = ref(Date.now());
+
+const normalizeTime = (t) => {
+    if (!t) return "00:00";
+    const clean = String(t).trim();
+    if (clean.length === 5) return clean;
+    if (clean.length >= 8) return clean.substring(0, 5);
+    return clean.padStart(5, "0");
+};
+
+// Calculate startMs and endMs for today's meeting schedule
+const todayZoomSchedule = computed(() => {
+    let startMs = null;
+    let endMs = null;
+
+    // 1. Check today's module first (for multi-day or unit-scheduled courses)
+    const mod = props.dailySchedule?.today_module;
+    if (mod) {
+        if (mod.zoom_start_at) {
+            startMs = new Date(mod.zoom_start_at).getTime();
+        } else if (mod.scheduled_date && mod.start_time) {
+            startMs = new Date(
+                `${String(mod.scheduled_date).substring(0, 10)}T${normalizeTime(mod.start_time)}:00`,
+            ).getTime();
+        }
+
+        if (mod.zoom_end_at) {
+            endMs = new Date(mod.zoom_end_at).getTime();
+        } else if (mod.scheduled_date && mod.end_time) {
+            endMs = new Date(
+                `${String(mod.scheduled_date).substring(0, 10)}T${normalizeTime(mod.end_time)}:00`,
+            ).getTime();
+        }
+    }
+
+    // 2. Check course-level schedule
+    if (!startMs && props.course?.zoom_start_at) {
+        startMs = new Date(props.course.zoom_start_at).getTime();
+    }
+    if (!endMs && props.course?.zoom_end_at) {
+        endMs = new Date(props.course.zoom_end_at).getTime();
+    }
+
+    return {
+        startMs,
+        endMs,
+        hasSchedule: Boolean(startMs),
+    };
+});
+
+// Real-time reactive status: 'upcoming', 'live', 'ended', 'unscheduled'
+const effectiveZoomStatus = computed(() => {
+    if (props.course?.zoom_status === "ended") return "ended";
+    if (props.dailySchedule?.today_module?.zoom_status === "ended")
+        return "ended";
+
+    const { startMs, endMs, hasSchedule } = todayZoomSchedule.value;
+    if (!hasSchedule) {
+        return props.course?.zoom_status || "unscheduled";
+    }
+
+    const now = currentTime.value;
+
+    if (endMs && now > endMs) {
+        return "ended";
+    }
+
+    if (startMs && now < startMs) {
+        // If not reached startMs yet, check if instructor manually marked as live
+        if (
+            props.course?.zoom_status === "live" ||
+            props.dailySchedule?.today_module?.zoom_status === "live"
+        ) {
+            return "live";
+        }
+        return "upcoming";
+    }
+
+    return "live";
+});
+
+// Has the scheduled meeting start time arrived?
+// Meeting ID & Passcode are ONLY revealed when this is TRUE!
+const isZoomTimeStarted = computed(() => {
+    const { startMs, hasSchedule } = todayZoomSchedule.value;
+    if (!hasSchedule) {
+        return true;
+    }
+    return currentTime.value >= startMs || effectiveZoomStatus.value === "live";
+});
+
+// Check if attendance schedule is upcoming in the future
+const isAttendanceScheduleUpcoming = computed(() => {
+    const schedAt =
+        props.course?.zoom_attendance_scheduled_at ||
+        dailySchedule.value?.today_module?.zoom_attendance_scheduled_at;
+    if (!schedAt) return false;
+    const schedTime = new Date(schedAt).getTime();
+    return currentTime.value < schedTime;
+});
+
+// Has the scheduled meeting time passed?
+// "Terlambat / Berhalangan Hadir Online?" is ONLY shown when this is TRUE!
+const isSchedulePassed = computed(() => {
+    const { startMs, endMs, hasSchedule } = todayZoomSchedule.value;
+
+    if (effectiveZoomStatus.value === "ended") {
+        return true;
+    }
+
+    if (!hasSchedule) {
+        // If no schedule exists at all, allow self-study option
+        return true;
+    }
+
+    const now = currentTime.value;
+
+    if (endMs) {
+        return now >= endMs;
+    }
+
+    // If only start time was provided without end time, consider passed after 2 hours
+    return now >= startMs + 2 * 60 * 60 * 1000;
+});
 
 // Real-time Attendance Countdown Timer
 const remainingAttendanceSeconds = ref(
@@ -212,6 +342,7 @@ let attendanceTimer = null;
 onMounted(() => {
     attendanceTimer = setInterval(() => {
         const now = Date.now();
+        currentTime.value = now;
         let scheduledCloseTime = null;
 
         if (props.course?.zoom_attendance_scheduled_at) {
@@ -368,7 +499,7 @@ const selectLesson = (lesson, mod, mIdx) => {
     activeItemType.value = "lesson";
     activeLesson.value = {
         ...lesson,
-        module_title: mod ? mod.title : (lesson.module_title || ""),
+        module_title: mod ? mod.title : lesson.module_title || "",
     };
     activeQuiz.value = null;
     quizResult.value = null;
@@ -722,7 +853,7 @@ const getYoutubeEmbedUrl = (url) => {
                     "
                 >
                     <Video class="w-4 h-4" />
-                    <span>JALUR 1: Status Pembelajaran & Absensi</span>
+                    <span>Tab 1: Status Pembelajaran & Absensi</span>
                     <span
                         v-if="enrollment.status === 'completed'"
                         class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
@@ -736,19 +867,19 @@ const getYoutubeEmbedUrl = (url) => {
                         SUDAH ABSEN
                     </span>
                     <span
-                        v-else-if="course.zoom_status === 'live'"
+                        v-else-if="effectiveZoomStatus === 'live'"
                         class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white animate-pulse"
                     >
                         LIVE
                     </span>
                     <span
-                        v-else-if="course.zoom_status === 'upcoming'"
+                        v-else-if="effectiveZoomStatus === 'upcoming'"
                         class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                     >
                         TERJADWAL
                     </span>
                     <span
-                        v-else-if="course.zoom_status === 'ended'"
+                        v-else-if="effectiveZoomStatus === 'ended'"
                         class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
                     >
                         BERAKHIR
@@ -762,7 +893,7 @@ const getYoutubeEmbedUrl = (url) => {
                     ></span>
                 </button>
 
-                <!-- Jalur 2 Tab: For 1-day course, it is NOT visible until student attends Jalur 1. For multi-day, it is visible from day 1 -->
+                <!-- Tab 2 Tab: For 1-day course, it is NOT visible until student attends Tab 1. For multi-day, it is visible from day 1 -->
                 <button
                     v-if="isJalur2Visible"
                     @click="selectedPath = 'mandiri'"
@@ -774,7 +905,7 @@ const getYoutubeEmbedUrl = (url) => {
                     "
                 >
                     <BookOpen class="w-4 h-4" />
-                    <span>JALUR 2: Materi & Evaluasi Pembelajaran</span>
+                    <span>Tab 2: Materi & Evaluasi Pembelajaran</span>
                     <span
                         class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-black/20 ml-1"
                     >
@@ -784,10 +915,10 @@ const getYoutubeEmbedUrl = (url) => {
             </div>
 
             <!-- ======================================================== -->
-            <!-- JALUR 1: SESI LIVE ZOOM                                  -->
+            <!-- Tab 1: SESI LIVE ZOOM                                  -->
             <!-- ======================================================== -->
             <div v-if="selectedPath === 'zoom'" class="space-y-6">
-                <!-- Mandatory Jalur 1 Guideline / Daily Schedule Banner -->
+                <!-- Mandatory Tab 1 Guideline / Daily Schedule Banner -->
                 <!-- Case A: Pelatihan 1 Hari -->
                 <div
                     v-if="dailySchedule?.is_single_day"
@@ -800,7 +931,7 @@ const getYoutubeEmbedUrl = (url) => {
                     </div>
                     <div class="leading-relaxed">
                         <strong class="font-bold"
-                            >Pelatihan 1 Hari (Wajib Jalur 1 - Tatap Muka Online
+                            >Pelatihan 1 Hari (Wajib Tab 1 - Tatap Muka Online
                             Meeting):</strong
                         >
                         Pelatihan ini berdurasi 1 hari. Seluruh peserta wajib
@@ -946,7 +1077,7 @@ const getYoutubeEmbedUrl = (url) => {
                         <div
                             class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center shadow-inner"
                             :class="
-                                course.zoom_status === 'live'
+                                effectiveZoomStatus === 'live'
                                     ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 animate-pulse'
                                     : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
                             "
@@ -976,10 +1107,14 @@ const getYoutubeEmbedUrl = (url) => {
 
                         <!-- Zoom Schedule Indicator -->
                         <div
-                            v-if="course.zoom_start_at"
+                            v-if="
+                                course.zoom_start_at ||
+                                dailySchedule?.today_module?.zoom_start_at ||
+                                todayZoomSchedule.hasSchedule
+                            "
                             class="p-3.5 rounded-xl border text-xs text-slate-600 dark:text-slate-300 flex items-center justify-center gap-2"
                             :class="
-                                course.zoom_status === 'live'
+                                effectiveZoomStatus === 'live'
                                     ? 'bg-rose-50 border-rose-200 dark:bg-rose-950/30 dark:border-rose-900/60 text-rose-800 dark:text-rose-300 font-bold'
                                     : 'bg-slate-50 border-slate-200 dark:bg-slate-800/60 dark:border-slate-700/60'
                             "
@@ -988,45 +1123,121 @@ const getYoutubeEmbedUrl = (url) => {
                             <span>
                                 Jadwal Sesi Online Meeting:
                                 <strong>{{
-                                    formatReadableDate(course.zoom_start_at)
+                                    formatReadableDate(
+                                        course.zoom_start_at ||
+                                            dailySchedule?.today_module
+                                                ?.zoom_start_at,
+                                    )
                                 }}</strong>
-                                <span v-if="course.zoom_end_at">
+                                <span
+                                    v-if="
+                                        course.zoom_end_at ||
+                                        dailySchedule?.today_module?.zoom_end_at
+                                    "
+                                >
                                     s/d
                                     <strong>{{
-                                        formatReadableDate(course.zoom_end_at)
+                                        formatReadableDate(
+                                            course.zoom_end_at ||
+                                                dailySchedule?.today_module
+                                                    ?.zoom_end_at,
+                                        )
                                     }}</strong></span
                                 >
                             </span>
                         </div>
 
-                        <!-- Zoom Credentials Box -->
+                        <!-- Zoom Credentials Box (Hidden when ended) -->
                         <div
-                            class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left"
+                            v-if="effectiveZoomStatus !== 'ended'"
+                            class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 text-left transition-all"
                         >
-                            <div>
+                            <!-- Case A: Scheduled & Time has NOT arrived yet (Locked State) -->
+                            <div
+                                v-if="
+                                    todayZoomSchedule.hasSchedule &&
+                                    !isZoomTimeStarted
+                                "
+                                class="flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left py-1"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0"
+                                    >
+                                        <Lock class="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4
+                                            class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                                        >
+                                            Meeting ID & Passcode Terkunci
+                                        </h4>
+                                        <p
+                                            class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5"
+                                        >
+                                            Akan otomatis ditampilkan saat waktu
+                                            sesi online meeting tiba
+                                            <span
+                                                v-if="todayZoomSchedule.startMs"
+                                                class="font-bold text-indigo-600 dark:text-indigo-400"
+                                            >
+                                                ({{
+                                                    formatReadableDate(
+                                                        course.zoom_start_at ||
+                                                            dailySchedule
+                                                                ?.today_module
+                                                                ?.zoom_start_at,
+                                                    )
+                                                }}) </span
+                                            >.
+                                        </p>
+                                    </div>
+                                </div>
                                 <span
-                                    class="text-[10px] text-slate-400 font-semibold uppercase"
-                                    >Meeting ID:</span
+                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 shrink-0"
                                 >
-                                <p
-                                    class="text-sm font-mono font-bold text-slate-900 dark:text-white"
-                                >
-                                    {{
-                                        course.zoom_meeting_id ||
-                                        "Tersedia di tautan Online Meeting"
-                                    }}
-                                </p>
+                                    <Clock class="w-3.5 h-3.5" />
+                                    <span>Menunggu Jam Sesi</span>
+                                </span>
                             </div>
-                            <div>
-                                <span
-                                    class="text-[10px] text-slate-400 font-semibold uppercase"
-                                    >Passcode:</span
-                                >
-                                <p
-                                    class="text-sm font-mono font-bold text-slate-900 dark:text-white"
-                                >
-                                    {{ course.zoom_passcode || "-" }}
-                                </p>
+
+                            <!-- Case B: Session Started / Live / Ended / Unscheduled (Revealed) -->
+                            <div
+                                v-else
+                                class="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                            >
+                                <div>
+                                    <span
+                                        class="text-[10px] text-slate-400 font-semibold uppercase"
+                                        >Meeting ID:</span
+                                    >
+                                    <p
+                                        class="text-sm font-mono font-bold text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            course.zoom_meeting_id ||
+                                            dailySchedule?.today_module
+                                                ?.zoom_meeting_id ||
+                                            "Tersedia di tautan Online Meeting"
+                                        }}
+                                    </p>
+                                </div>
+                                <div>
+                                    <span
+                                        class="text-[10px] text-slate-400 font-semibold uppercase"
+                                        >Passcode:</span
+                                    >
+                                    <p
+                                        class="text-sm font-mono font-bold text-slate-900 dark:text-white"
+                                    >
+                                        {{
+                                            course.zoom_passcode ||
+                                            dailySchedule?.today_module
+                                                ?.zoom_passcode ||
+                                            "-"
+                                        }}
+                                    </p>
+                                </div>
                             </div>
                         </div>
 
@@ -1034,7 +1245,7 @@ const getYoutubeEmbedUrl = (url) => {
                         <div class="pt-2">
                             <!-- Case 1: Zoom is UPCOMING (Not started yet) -->
                             <div
-                                v-if="course.zoom_status === 'upcoming'"
+                                v-if="effectiveZoomStatus === 'upcoming'"
                                 class="space-y-3"
                             >
                                 <button
@@ -1052,7 +1263,9 @@ const getYoutubeEmbedUrl = (url) => {
                                     Tombol masuk Online Meeting akan aktif saat
                                     jadwal sesi pelatihan tiba ({{
                                         formatReadableDate(
-                                            course.zoom_start_at,
+                                            course.zoom_start_at ||
+                                                dailySchedule?.today_module
+                                                    ?.zoom_start_at,
                                         )
                                     }}).
                                 </p>
@@ -1060,12 +1273,18 @@ const getYoutubeEmbedUrl = (url) => {
 
                             <!-- Case 2: Zoom is LIVE (Ongoing) -->
                             <div
-                                v-else-if="course.zoom_status === 'live'"
+                                v-else-if="effectiveZoomStatus === 'live'"
                                 class="space-y-3"
                             >
                                 <a
-                                    v-if="course.zoom_link"
-                                    :href="course.zoom_link"
+                                    v-if="
+                                        course.zoom_link ||
+                                        dailySchedule?.today_module?.zoom_link
+                                    "
+                                    :href="
+                                        course.zoom_link ||
+                                        dailySchedule?.today_module?.zoom_link
+                                    "
                                     target="_blank"
                                     class="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-sm font-black text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-600/30 animate-pulse transition-all transform active:scale-95"
                                 >
@@ -1084,11 +1303,11 @@ const getYoutubeEmbedUrl = (url) => {
 
                             <!-- Case 3: Zoom is ENDED -->
                             <div
-                                v-else-if="course.zoom_status === 'ended'"
+                                v-else-if="effectiveZoomStatus === 'ended'"
                                 class="space-y-4"
                             >
                                 <div
-                                    class="p-6 bg-gradient-to-r from-slate-100 via-indigo-50 to-blue-50 dark:from-slate-800 dark:via-slate-800/80 dark:to-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 text-center max-w-xl mx-auto shadow-sm space-y-3"
+                                    class="p-6 sm:p-7 bg-gradient-to-r from-slate-50 via-indigo-50/50 to-blue-50/50 dark:from-slate-800 dark:via-slate-800/80 dark:to-indigo-950/40 rounded-2xl border border-indigo-200 dark:border-indigo-900/60 text-center max-w-xl mx-auto shadow-sm space-y-4"
                                 >
                                     <div
                                         class="inline-flex p-3 bg-indigo-600 text-white rounded-2xl shadow-md"
@@ -1107,20 +1326,9 @@ const getYoutubeEmbedUrl = (url) => {
                                         >
                                             Waktu sesi tatap muka Online Meeting
                                             telah berakhir.
+
                                             <span
                                                 v-if="
-                                                    dailySchedule?.tomorrow_zoom_time
-                                                "
-                                                class="block font-semibold text-indigo-700 dark:text-indigo-300 mt-1.5"
-                                            >
-                                                ⏰ Ingat sesi tatap muka Online
-                                                Meeting berikutnya:
-                                                {{
-                                                    dailySchedule.tomorrow_zoom_time
-                                                }}.
-                                            </span>
-                                            <span
-                                                v-else-if="
                                                     dailySchedule?.tomorrow_mode ===
                                                     'asinkronus'
                                                 "
@@ -1144,23 +1352,78 @@ const getYoutubeEmbedUrl = (url) => {
                                                 mempelajari kembali materi,
                                                 silakan akses
                                                 <strong
-                                                    >Jalur 2: Materi &
+                                                    >Tab 2: Materi &
                                                     Evaluasi</strong
                                                 >.
                                             </span>
                                         </p>
                                     </div>
-                                    <button
-                                        type="button"
-                                        @click="selectedPath = 'mandiri'"
-                                        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/30 transition transform active:scale-95"
-                                    >
-                                        <span
-                                            >Buka Materi & Evaluasi (Jalur
-                                            2)</span
+
+                                    <!-- UNIFIED ACTION BUTTON -->
+                                    <div class="pt-1">
+                                        <!-- Case 3A: Already Attended Today -> Simply Go to Tab 2 -->
+                                        <div
+                                            v-if="
+                                                isTodayAttendanceCompleted ||
+                                                enrollment.status ===
+                                                    'completed'
+                                            "
+                                            class="space-y-2"
                                         >
-                                        <ArrowRight class="w-3.5 h-3.5" />
-                                    </button>
+                                            <button
+                                                type="button"
+                                                @click="
+                                                    selectedPath = 'mandiri'
+                                                "
+                                                class="inline-flex items-center gap-2 px-7 py-3 rounded-xl text-xs sm:text-sm font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/30 transition transform active:scale-95 cursor-pointer"
+                                            >
+                                                <span
+                                                    >Lanjut ke Tab 2 (Materi &
+                                                    Evaluasi)</span
+                                                >
+                                                <ArrowRight class="w-4 h-4" />
+                                            </button>
+                                        </div>
+
+                                        <!-- Case 3B: NOT Attended Today -> Unified Self-Study Checkin & Go to Tab 2 -->
+                                        <div
+                                            v-else
+                                            class="space-y-2 max-w-md mx-auto"
+                                        >
+                                            <button
+                                                type="button"
+                                                @click="submitSelfStudyCheckin"
+                                                :disabled="isAttendingSelfStudy"
+                                                class="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 rounded-xl text-xs sm:text-sm font-black text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer"
+                                            >
+                                                <Loader2
+                                                    v-if="isAttendingSelfStudy"
+                                                    class="w-4 h-4 animate-spin"
+                                                />
+                                                <CheckCircle2
+                                                    v-else
+                                                    class="w-4 h-4"
+                                                />
+                                                <span>{{
+                                                    isAttendingSelfStudy
+                                                        ? "Mencatat Presensi & Membuka Tab 2..."
+                                                        : "Konfirmasi Absen Belajar Mandiri & Lanjut ke Tab 2"
+                                                }}</span>
+                                                <ArrowRight
+                                                    v-if="!isAttendingSelfStudy"
+                                                    class="w-4 h-4"
+                                                />
+                                            </button>
+                                            <p
+                                                class="text-[11px] text-slate-500 dark:text-slate-400 leading-snug"
+                                            >
+                                                Setelah konfirmasi, kehadiran
+                                                Anda otomatis tercatat dan Tab 2
+                                                (Materi & Evaluasi) langsung
+                                                terbuka untuk Anda pelajari.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1184,10 +1447,16 @@ const getYoutubeEmbedUrl = (url) => {
                         </div>
 
                         <!-- ATTENDANCE STATUS TRIGGER -->
+                        <!-- If effectiveZoomStatus is 'ended' and student hasn't attended yet, it is already handled cleanly in Case 3 above with the unified button, so we don't display the duplicate/confusing closed box -->
                         <div
+                            v-if="
+                                effectiveZoomStatus !== 'ended' ||
+                                isTodayAttendanceCompleted ||
+                                enrollment.status === 'completed'
+                            "
                             class="border-t border-slate-200 dark:border-slate-800 pt-6 mt-6"
                         >
-                            <!-- Case A: Already Attended Today / In Jalur 1 -->
+                            <!-- Case A: Already Attended Today / In Tab 1 -->
                             <div
                                 v-if="
                                     isTodayAttendanceCompleted ||
@@ -1248,10 +1517,10 @@ const getYoutubeEmbedUrl = (url) => {
                                             {{
                                                 hasAttendedSelfStudy &&
                                                 !hasAttendedLiveZoom
-                                                    ? "Kehadiran Anda tercatat via Belajar Mandiri (Susulan). Jalur 2 (Materi & Evaluasi) telah dibuka!"
+                                                    ? "Kehadiran Anda tercatat via Belajar Mandiri (Susulan). Tab 2 (Materi & Evaluasi) telah dibuka!"
                                                     : isMultiDay
                                                       ? `Kehadiran tatap muka online Hari Ke-${dailySchedule?.current_day_number || 1} telah tercatat.`
-                                                      : "Kehadiran Anda pada sesi tatap muka online telah tercatat. Jalur 2 (Materi & Evaluasi) kini telah terbuka!"
+                                                      : "Kehadiran Anda pada sesi tatap muka online telah tercatat. Tab 2 (Materi & Evaluasi) kini telah terbuka!"
                                             }}
                                         </p>
                                     </div>
@@ -1270,7 +1539,7 @@ const getYoutubeEmbedUrl = (url) => {
                                     "
                                 >
                                     <span
-                                        >Lanjut ke Jalur 2 (Materi &
+                                        >Lanjut ke Tab 2 (Materi &
                                         Evaluasi)</span
                                     >
                                     <ArrowRight class="w-4 h-4" />
@@ -1314,7 +1583,10 @@ const getYoutubeEmbedUrl = (url) => {
                                     :disabled="isAttending"
                                     class="w-full sm:w-auto px-8 py-3.5 rounded-xl text-sm font-black text-white bg-rose-600 hover:bg-rose-700 shadow-xl shadow-rose-600/30 transition-all transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
                                 >
-                                    <Loader2 v-if="isAttending" class="w-5 h-5 animate-spin" />
+                                    <Loader2
+                                        v-if="isAttending"
+                                        class="w-5 h-5 animate-spin"
+                                    />
                                     <CheckCircle2 v-else class="w-5 h-5" />
                                     <span>{{
                                         isAttending
@@ -1339,28 +1611,38 @@ const getYoutubeEmbedUrl = (url) => {
                                     >
                                 </div>
                                 <p
-                                    v-if="course.zoom_attendance_scheduled_at"
+                                    v-if="isAttendanceScheduleUpcoming"
                                     class="max-w-md mx-auto text-xs text-indigo-600 dark:text-indigo-400 font-semibold"
                                 >
                                     Presensi dijadwalkan buka pada pukul:
                                     {{
                                         formatReadableDate(
-                                            course.zoom_attendance_scheduled_at,
+                                            course.zoom_attendance_scheduled_at ||
+                                                dailySchedule?.today_module
+                                                    ?.zoom_attendance_scheduled_at,
                                         )
                                     }}
                                     (Durasi:
                                     {{
-                                        course.zoom_attendance_duration_minutes
+                                        course.zoom_attendance_duration_minutes ||
+                                        dailySchedule?.today_module
+                                            ?.zoom_attendance_duration_minutes ||
+                                        30
                                     }}
                                     menit).
                                 </p>
-                                <p v-else class="max-w-md mx-auto text-[11px]">
-                                    Sesi tatap muka online sedang tidak membuka
-                                    absensi online saat ini.
+                                <p
+                                    v-else
+                                    class="max-w-md mx-auto text-xs text-slate-500"
+                                >
+                                    Waktu presensi tatap muka online saat ini
+                                    belum dibuka atau telah berakhir.
                                 </p>
 
                                 <!-- Opsi B: Konfirmasi Absen Mandiri (Susulan / Terlambat) -->
+                                <!-- HANYA MUNCUL JIKA WAKTU YANG DIJADWALKAN TELAH LEWAT -->
                                 <div
+                                    v-if="isSchedulePassed"
                                     class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700/80 max-w-lg mx-auto space-y-2 text-center"
                                 >
                                     <div
@@ -1390,22 +1672,58 @@ const getYoutubeEmbedUrl = (url) => {
                                             type="button"
                                             @click="submitSelfStudyCheckin"
                                             :disabled="isAttendingSelfStudy"
-                                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25 transition-all transform active:scale-95 disabled:opacity-50"
+                                            class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25 transition-all transform active:scale-95 disabled:opacity-50 cursor-pointer"
                                         >
-                                            <Loader2 v-if="isAttendingSelfStudy" class="w-4 h-4 animate-spin" />
-                                            <BookOpen v-else class="w-4 h-4" />
+                                            <Loader2
+                                                v-if="isAttendingSelfStudy"
+                                                class="w-4 h-4 animate-spin"
+                                            />
+                                            <CheckCircle2
+                                                v-else
+                                                class="w-4 h-4"
+                                            />
                                             <span>{{
                                                 isAttendingSelfStudy
-                                                    ? "Mencatat Presensi Mandiri..."
-                                                    : "Konfirmasi Absen Belajar Mandiri (Susulan)"
+                                                    ? "Mencatat Presensi & Membuka Tab 2..."
+                                                    : "Konfirmasi Absen Belajar Mandiri & Lanjut ke Tab 2"
                                             }}</span>
+                                            <ArrowRight
+                                                v-if="!isAttendingSelfStudy"
+                                                class="w-3.5 h-3.5"
+                                            />
                                         </button>
                                     </div>
                                     <p class="text-[11px] text-slate-400">
                                         Setelah konfirmasi, kehadiran Anda
-                                        tercatat dan Jalur 2 (Materi & Evaluasi)
+                                        tercatat dan Tab 2 (Materi & Evaluasi)
                                         langsung terbuka untuk Anda pelajari.
                                     </p>
+                                </div>
+
+                                <!-- Keterangan saat jadwal sesi belum selesai -->
+                                <div
+                                    v-else-if="todayZoomSchedule.hasSchedule"
+                                    class="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-800 text-[11px] text-slate-500 max-w-md mx-auto"
+                                >
+                                    <span>
+                                        Opsi presensi susulan mandiri akan
+                                        otomatis terbuka jika Anda berhalangan
+                                        hadir setelah sesi tatap muka online
+                                        berakhir
+                                        <strong
+                                            v-if="todayZoomSchedule.endMs"
+                                            class="text-slate-700 dark:text-slate-300"
+                                        >
+                                            ({{
+                                                formatReadableDate(
+                                                    course.zoom_end_at ||
+                                                        dailySchedule
+                                                            ?.today_module
+                                                            ?.zoom_end_at,
+                                                )
+                                            }}) </strong
+                                        >.
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -1431,7 +1749,7 @@ const getYoutubeEmbedUrl = (url) => {
                             <h3
                                 class="text-xs font-black uppercase tracking-wider text-slate-900 dark:text-white"
                             >
-                                Status Presensi Harian Sesi Tatap Muka (Jalur 1)
+                                Status Presensi Harian Sesi Tatap Muka (Tab 1)
                             </h3>
                         </div>
                         <span
@@ -1540,10 +1858,10 @@ const getYoutubeEmbedUrl = (url) => {
             </div>
 
             <!-- ======================================================== -->
-            <!-- JALUR 2: BELAJAR MANDIRI (SUSULAN / MATERI)             -->
+            <!-- Tab 2: BELAJAR MANDIRI (SUSULAN / MATERI)             -->
             <!-- ======================================================== -->
             <div v-if="selectedPath === 'mandiri'" class="space-y-6">
-                <!-- Case: Locked if single day and Jalur 1 not finished -->
+                <!-- Case: Locked if single day and Tab 1 not finished -->
                 <div
                     v-if="!isJalur2Visible"
                     class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 text-center max-w-lg mx-auto space-y-4 shadow-sm"
@@ -1556,25 +1874,25 @@ const getYoutubeEmbedUrl = (url) => {
                     <h3
                         class="text-base font-bold text-slate-900 dark:text-white"
                     >
-                        Jalur 2 (Materi & Evaluasi) Belum Terbuka
+                        Tab 2 (Materi & Evaluasi) Belum Terbuka
                     </h3>
                     <p class="text-xs text-slate-500 leading-relaxed">
                         Untuk pelatihan 1 hari, peserta diwajibkan menyelesaikan
-                        <strong>Jalur 1: Status Pembelajaran & Absensi</strong>
+                        <strong>Tab 1: Status Pembelajaran & Absensi</strong>
                         terlebih dahulu.
                     </p>
                     <p
                         class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 p-3 rounded-xl border border-amber-200 dark:border-amber-900/60"
                     >
                         Silakan ikuti sesi tatap muka Online Meeting dan lakukan
-                        absensi kehadiran di Jalur 1 hingga status pembelajaran
+                        absensi kehadiran di Tab 1 hingga status pembelajaran
                         selesai.
                     </p>
                     <button
                         @click="selectedPath = 'zoom'"
                         class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
                     >
-                        Kembali ke Status Pembelajaran & Absensi (Jalur 1)
+                        Kembali ke Status Pembelajaran & Absensi (Tab 1)
                     </button>
                 </div>
 
@@ -1625,7 +1943,7 @@ const getYoutubeEmbedUrl = (url) => {
                         </div>
                     </div>
 
-                    <!-- Instruction Banner for Jalur 2 (Single Day) -->
+                    <!-- Instruction Banner for Tab 2 (Single Day) -->
                     <div
                         v-else-if="enrollment.status !== 'completed'"
                         class="p-4 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-2xl text-xs text-blue-900 dark:text-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
@@ -1639,7 +1957,7 @@ const getYoutubeEmbedUrl = (url) => {
                             <div class="leading-relaxed">
                                 <span class="font-bold"
                                     >Petunjuk Materi & Evaluasi Pembelajaran
-                                    (Jalur 2):</span
+                                    (Tab 2):</span
                                 >
                                 <span
                                     v-if="
@@ -2036,8 +2354,14 @@ const getYoutubeEmbedUrl = (url) => {
                                             :disabled="isAttending"
                                             class="w-full py-3.5 px-3 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30 transition-all animate-pulse flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                                         >
-                                            <Loader2 v-if="isAttending" class="w-4 h-4 animate-spin" />
-                                            <CheckCircle2 v-else class="w-4 h-4" />
+                                            <Loader2
+                                                v-if="isAttending"
+                                                class="w-4 h-4 animate-spin"
+                                            />
+                                            <CheckCircle2
+                                                v-else
+                                                class="w-4 h-4"
+                                            />
                                             <span>{{
                                                 isAttending
                                                     ? "Memproses..."
@@ -2417,8 +2741,14 @@ const getYoutubeEmbedUrl = (url) => {
                                             :disabled="isSubmittingQuiz"
                                             class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 transition disabled:opacity-50"
                                         >
-                                            <Loader2 v-if="isSubmittingQuiz" class="w-4 h-4 animate-spin" />
-                                            <CheckCircle2 v-else class="w-4 h-4" />
+                                            <Loader2
+                                                v-if="isSubmittingQuiz"
+                                                class="w-4 h-4 animate-spin"
+                                            />
+                                            <CheckCircle2
+                                                v-else
+                                                class="w-4 h-4"
+                                            />
                                             <span>{{
                                                 isSubmittingQuiz
                                                     ? "Memeriksa Jawaban..."
@@ -2464,7 +2794,10 @@ const getYoutubeEmbedUrl = (url) => {
                                                 :disabled="isAttending"
                                                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse disabled:opacity-50"
                                             >
-                                                <Loader2 v-if="isAttending" class="w-4 h-4 animate-spin" />
+                                                <Loader2
+                                                    v-if="isAttending"
+                                                    class="w-4 h-4 animate-spin"
+                                                />
                                                 <Award v-else class="w-4 h-4" />
                                                 <span>{{
                                                     isAttending
@@ -2501,7 +2834,10 @@ const getYoutubeEmbedUrl = (url) => {
 
                                     <div class="flex items-center gap-2">
                                         <span
-                                            v-if="activeLesson.content_type === 'pdf'"
+                                            v-if="
+                                                activeLesson.content_type ===
+                                                'pdf'
+                                            "
                                             class="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold flex items-center gap-1"
                                         >
                                             <BookOpen class="w-3.5 h-3.5" />
@@ -2621,7 +2957,7 @@ const getYoutubeEmbedUrl = (url) => {
                                         <PdfBookViewer
                                             :pdf-url="
                                                 getPdfUrl(
-                                                    activeLesson.media_path
+                                                    activeLesson.media_path,
                                                 )
                                             "
                                             :title="activeLesson.title"
@@ -2639,7 +2975,8 @@ const getYoutubeEmbedUrl = (url) => {
                                         v-else
                                         class="p-12 text-center bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 text-xs"
                                     >
-                                        File dokumen PDF belum diunggah oleh instruktur.
+                                        File dokumen PDF belum diunggah oleh
+                                        instruktur.
                                     </div>
                                 </div>
 
@@ -2664,15 +3001,20 @@ const getYoutubeEmbedUrl = (url) => {
                                             "
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium"
                                         >
-                                            <AlertCircle class="w-4 h-4 shrink-0" />
+                                            <AlertCircle
+                                                class="w-4 h-4 shrink-0"
+                                            />
                                             <span>
                                                 Buka & baca slide hingga halaman
                                                 terakhir untuk menyelesaikan.
                                             </span>
                                         </div>
-                                        <span v-else class="text-xs text-slate-500">
-                                            Pastikan Anda telah menyimak materi ini
-                                            sebelum menandai selesai.
+                                        <span
+                                            v-else
+                                            class="text-xs text-slate-500"
+                                        >
+                                            Pastikan Anda telah menyimak materi
+                                            ini sebelum menandai selesai.
                                         </span>
                                     </div>
 
@@ -2699,7 +3041,9 @@ const getYoutubeEmbedUrl = (url) => {
                                                 class="w-4 h-4 animate-spin"
                                             />
                                             <Lock
-                                                v-else-if="!canCompleteActiveLesson"
+                                                v-else-if="
+                                                    !canCompleteActiveLesson
+                                                "
                                                 class="w-4 h-4"
                                             />
                                             <CheckCircle2
@@ -2727,7 +3071,10 @@ const getYoutubeEmbedUrl = (url) => {
                                             :disabled="isAttending"
                                             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse cursor-pointer disabled:opacity-50"
                                         >
-                                            <Loader2 v-if="isAttending" class="w-4 h-4 animate-spin" />
+                                            <Loader2
+                                                v-if="isAttending"
+                                                class="w-4 h-4 animate-spin"
+                                            />
                                             <Award v-else class="w-4 h-4" />
                                             <span>{{
                                                 isAttending

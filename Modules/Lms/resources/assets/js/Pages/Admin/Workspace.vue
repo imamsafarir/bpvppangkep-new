@@ -47,6 +47,7 @@ import {
     QrCode,
     Type,
     Loader2,
+    Layers,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -156,17 +157,81 @@ const addDaysToYmd = (ymdStr, daysToAdd = 0) => {
 const formatToInputDate = (dateStr) => {
     if (!dateStr) return "";
     try {
-        const d = new Date(dateStr);
+        const str = String(dateStr).trim();
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(str)) {
+            return str;
+        }
+        const d = new Date(str);
         if (isNaN(d.getTime())) return "";
-        const pad = (n) => String(n).padStart(2, "0");
-        const year = d.getFullYear();
-        const month = pad(d.getMonth() + 1);
-        const day = pad(d.getDate());
-        const hours = pad(d.getHours());
-        const minutes = pad(d.getMinutes());
-        return `${year}-${month}-${day}T${hours}:${minutes}`;
+
+        const parts = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "Asia/Makassar",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hourCycle: "h23",
+        }).formatToParts(d);
+
+        const getPart = (type) => parts.find((p) => p.type === type)?.value || "00";
+        return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart("minute")}`;
     } catch (e) {
         return "";
+    }
+};
+
+const formatDateIndo = (dateStr) => {
+    if (!dateStr) return "Belum Ditentukan";
+    try {
+        const str = String(dateStr).trim();
+        const dateMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dateMatch) {
+            const [, y, m, d] = dateMatch.map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+            });
+        }
+        const d = new Date(str);
+        if (isNaN(d.getTime())) return dateStr;
+        return new Intl.DateTimeFormat("id-ID", {
+            timeZone: "Asia/Makassar",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        }).format(d);
+    } catch (e) {
+        return dateStr;
+    }
+};
+
+const formatDateIndoWithDay = (dateStr) => {
+    if (!dateStr) return "";
+    try {
+        const str = String(dateStr).trim();
+        const dateMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (dateMatch) {
+            const [, y, m, d] = dateMatch.map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString("id-ID", {
+                weekday: "long",
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+            });
+        }
+        const d = new Date(str);
+        if (isNaN(d.getTime())) return dateStr;
+        return new Intl.DateTimeFormat("id-ID", {
+            timeZone: "Asia/Makassar",
+            weekday: "long",
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+        }).format(d);
+    } catch (e) {
+        return dateStr;
     }
 };
 
@@ -200,49 +265,114 @@ const todayWita = computed(() => {
     }
 });
 
+// Helper to get scheduled YYYY-MM-DD for a specific day number
+const getDateForDayNumber = (dayNum) => {
+    const d = parseInt(dayNum, 10) || 1;
+    if (props.course?.modules) {
+        const found = props.course.modules.find(
+            (m) => (m.day_number || 1) === d && m.scheduled_date,
+        );
+        if (found && found.scheduled_date) {
+            return String(found.scheduled_date).substring(0, 10);
+        }
+    }
+    if (props.course?.start_date) {
+        return addDaysToYmd(props.course.start_date, d - 1);
+    }
+    return "";
+};
+
 // Calculate which day number today corresponds to relative to course.start_date
+// Returns null if today is before course start date or after course end date
 const todayDayNumber = computed(() => {
-    if (!props.course.start_date) return 1;
-    if (isSingleDayCourse.value) return 1;
+    if (!props.course?.start_date) return null;
     try {
         const startStr = String(props.course.start_date).substring(0, 10);
+        const todayStr = String(todayWita.value).substring(0, 10);
+
+        // 1. Check if today matches any module's scheduled_date directly
+        if (props.course.modules) {
+            const todayMod = props.course.modules.find(
+                (m) =>
+                    m.scheduled_date &&
+                    String(m.scheduled_date).substring(0, 10) === todayStr,
+            );
+            if (todayMod && todayMod.day_number) {
+                return todayMod.day_number;
+            }
+        }
+
+        // 2. Diff days from start_date
         const [sy, sm, sd] = startStr.split("-").map(Number);
-        const [ty, tm, td] = todayWita.value.split("-").map(Number);
+        const [ty, tm, td] = todayStr.split("-").map(Number);
         const startDate = new Date(sy, sm - 1, sd);
         const todayDate = new Date(ty, tm - 1, td);
         const diffTime = todayDate.getTime() - startDate.getTime();
         const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
-        if (diffDays < 1) return 1;
-        if (
-            props.course.duration_in_days &&
-            diffDays > props.course.duration_in_days
-        ) {
-            return props.course.duration_in_days;
+
+        if (diffDays < 1) {
+            return null;
         }
+
+        const maxDays =
+            props.course.duration_in_days || distinctDays.value.length || 1;
+        if (diffDays > maxDays) {
+            return null;
+        }
+
         return diffDays;
     } catch (e) {
-        return 1;
+        return null;
+    }
+});
+
+// Relative course schedule status when today is not an active training day
+const courseStatusRelative = computed(() => {
+    if (!props.course?.start_date) return "";
+    try {
+        const startStr = String(props.course.start_date).substring(0, 10);
+        const todayStr = String(todayWita.value).substring(0, 10);
+        if (todayStr === startStr) return "Hari Pertama (Hari ke-1)";
+
+        const [sy, sm, sd] = startStr.split("-").map(Number);
+        const [ty, tm, td] = todayStr.split("-").map(Number);
+        const startDate = new Date(sy, sm - 1, sd);
+        const todayDate = new Date(ty, tm - 1, td);
+        const diffDays = Math.round(
+            (startDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24),
+        );
+
+        if (diffDays === 1) {
+            return `Mulai Besok (${formatDateIndo(startStr)})`;
+        }
+        if (diffDays > 1) {
+            return `${diffDays} hari lagi (${formatDateIndo(startStr)})`;
+        }
+
+        const endStr = props.course.end_date
+            ? String(props.course.end_date).substring(0, 10)
+            : startStr;
+        if (todayStr > endStr) {
+            return "Pelatihan Selesai";
+        }
+        return "";
+    } catch (e) {
+        return "";
     }
 });
 
 const calculateDateForDay = (dayNum) => {
-    if (!props.course.start_date || !dayNum) return "";
+    if (!dayNum) return "";
     try {
-        const startStr = String(props.course.start_date).substring(0, 10);
-        const [sy, sm, sd] = startStr.split("-").map(Number);
-        const targetDate = new Date(
-            sy,
-            sm - 1,
-            sd + (parseInt(dayNum, 10) - 1),
-        );
-        const formatted = targetDate.toLocaleDateString("id-ID", {
-            weekday: "long",
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-        });
+        const d = parseInt(dayNum, 10) || 1;
+        const targetDateYmd = getDateForDayNumber(d);
+        if (!targetDateYmd) return "";
+
+        const formatted = formatDateIndoWithDay(targetDateYmd);
 
         const [ty, tm, td] = todayWita.value.split("-").map(Number);
+        const [sy, sm, sd] = targetDateYmd.split("-").map(Number);
+        const targetDate = new Date(sy, sm - 1, sd);
         const todayDate = new Date(ty, tm - 1, td);
         const diffDays = Math.round(
             (targetDate.getTime() - todayDate.getTime()) /
@@ -264,11 +394,9 @@ const calculateDateForDay = (dayNum) => {
 watch(
     () => moduleForm.day_number,
     (newDay) => {
-        if (newDay && props.course.start_date && !isEditingModule.value) {
-            moduleForm.scheduled_date = addDaysToYmd(
-                props.course.start_date,
-                parseInt(newDay, 10) - 1,
-            );
+        if (newDay && !isEditingModule.value) {
+            moduleForm.scheduled_date =
+                getDateForDayNumber(newDay) || moduleForm.scheduled_date;
         }
     },
 );
@@ -289,26 +417,20 @@ const openAddModuleModal = () => {
     ) {
         defaultDay =
             parseInt(selectedScheduleFilter.value.replace("day_", ""), 10) || 1;
-    } else if (selectedScheduleFilter.value === "today") {
-        defaultDay = todayDayNumber.value || 1;
+    } else if (selectedScheduleFilter.value === "today" && todayDayNumber.value) {
+        defaultDay = todayDayNumber.value;
     } else {
         const maxDay =
             props.course.modules?.reduce(
                 (max, m) => Math.max(max, m.day_number || 1),
                 0,
             ) || 0;
-        defaultDay = maxDay > 0 ? maxDay : todayDayNumber.value || 1;
+        defaultDay = maxDay > 0 ? maxDay : 1;
     }
 
     moduleForm.day_number = defaultDay;
-    if (props.course.start_date) {
-        moduleForm.scheduled_date = addDaysToYmd(
-            props.course.start_date,
-            defaultDay - 1,
-        );
-    } else {
-        moduleForm.scheduled_date = todayWita.value;
-    }
+    moduleForm.scheduled_date =
+        getDateForDayNumber(defaultDay) || todayWita.value;
 
     moduleForm.start_time = "08:00";
     moduleForm.end_time = "10:00";
@@ -334,11 +456,8 @@ const openEditModuleModal = (module) => {
     if (!sched && module.zoom_start_at) {
         sched = String(module.zoom_start_at).substring(0, 10);
     }
-    if (!sched && props.course.start_date) {
-        sched = addDaysToYmd(
-            props.course.start_date,
-            (module.day_number || 1) - 1,
-        );
+    if (!sched) {
+        sched = getDateForDayNumber(module.day_number || 1);
     }
     moduleForm.scheduled_date = sched || todayWita.value;
 
@@ -416,6 +535,45 @@ const filteredModules = computed(() => {
     return props.course.modules;
 });
 
+// Grouped modules by day so Online Meeting & Attendance can be managed once per day
+const groupedModulesByDay = computed(() => {
+    const list = filteredModules.value;
+    if (!list || list.length === 0) return [];
+
+    const map = new Map();
+    list.forEach((m) => {
+        const day = m.day_number || 1;
+        if (!map.has(day)) {
+            map.set(day, {
+                day_number: day,
+                scheduled_date: m.scheduled_date || getDateForDayNumber(day),
+                modules: [],
+                hasSinkronus: false,
+                primaryModule: m,
+            });
+        }
+        const group = map.get(day);
+        group.modules.push(m);
+        if (m.delivery_mode === "sinkronus") {
+            group.hasSinkronus = true;
+            if (group.primaryModule.delivery_mode !== "sinkronus") {
+                group.primaryModule = m;
+            }
+        }
+        if (!group.scheduled_date && m.scheduled_date) {
+            group.scheduled_date = m.scheduled_date;
+        }
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.day_number - b.day_number);
+});
+
+const getOverallModuleIndex = (mod) => {
+    if (!props.course?.modules || !mod) return 1;
+    const idx = props.course.modules.findIndex((m) => m.id === mod.id);
+    return idx !== -1 ? idx + 1 : 1;
+};
+
 // Per-Unit Online Meeting & Attendance State & Timers
 const unitZoomForms = ref({});
 const unitAttendanceTimers = ref({});
@@ -479,13 +637,12 @@ const isUnitZoomLive = (mod) => {
 const initUnitState = (mod) => {
     if (!mod || !mod.id) return;
 
+    const dayNum = mod.day_number || 1;
     const initialDate = mod.scheduled_date
         ? String(mod.scheduled_date).substring(0, 10)
         : mod.zoom_start_at
           ? String(mod.zoom_start_at).substring(0, 10)
-          : props.course?.start_date
-            ? String(props.course.start_date).substring(0, 10)
-            : todayWita.value;
+          : (getDateForDayNumber(dayNum) || todayWita.value);
 
     const initialStart = mod.start_time
         ? String(mod.start_time).substring(0, 5)
@@ -512,7 +669,12 @@ const initUnitState = (mod) => {
             isSaving: false,
         };
     } else {
-        if (!unitZoomForms.value[mod.id].scheduled_date) {
+        if (
+            !unitZoomForms.value[mod.id].scheduled_date ||
+            (mod.scheduled_date &&
+                unitZoomForms.value[mod.id].scheduled_date !==
+                    String(mod.scheduled_date).substring(0, 10))
+        ) {
             unitZoomForms.value[mod.id].scheduled_date = initialDate;
         }
         if (!unitZoomForms.value[mod.id].start_time) {
@@ -582,6 +744,7 @@ const submitUnitZoomSchedule = (mod) => {
     const form = unitZoomForms.value[mod.id];
     if (!form) return;
     form.isSaving = true;
+    const dayNum = mod.day_number || 1;
     router.post(
         `/admin/lms/modules/${mod.id}/zoom/schedule`,
         {
@@ -596,15 +759,30 @@ const submitUnitZoomSchedule = (mod) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                isEditingZoomEnded.value[mod.id] = false;
-                isEditingZoomLive.value[mod.id] = false;
-                mod.scheduled_date = form.scheduled_date;
-                mod.start_time = form.start_time;
-                mod.end_time = form.end_time;
-                mod.zoom_link = form.zoom_link;
-                mod.zoom_meeting_id = form.zoom_meeting_id;
-                mod.zoom_passcode = form.zoom_passcode;
-                mod.zoom_status = "upcoming";
+                if (props.course?.modules) {
+                    props.course.modules.forEach((m) => {
+                        if ((m.day_number || 1) === dayNum) {
+                            m.scheduled_date = form.scheduled_date;
+                            m.start_time = form.start_time;
+                            m.end_time = form.end_time;
+                            m.zoom_link = form.zoom_link;
+                            m.zoom_meeting_id = form.zoom_meeting_id;
+                            m.zoom_passcode = form.zoom_passcode;
+                            m.zoom_status = "upcoming";
+                            m.zoom_attendance_closed_at = null;
+                            isEditingZoomEnded.value[m.id] = false;
+                            isEditingZoomLive.value[m.id] = false;
+                            if (unitZoomForms.value[m.id]) {
+                                unitZoomForms.value[m.id].scheduled_date = form.scheduled_date;
+                                unitZoomForms.value[m.id].start_time = form.start_time;
+                                unitZoomForms.value[m.id].end_time = form.end_time;
+                                unitZoomForms.value[m.id].zoom_link = form.zoom_link;
+                                unitZoomForms.value[m.id].zoom_meeting_id = form.zoom_meeting_id;
+                                unitZoomForms.value[m.id].zoom_passcode = form.zoom_passcode;
+                            }
+                        }
+                    });
+                }
             },
             onFinish: () => {
                 form.isSaving = false;
@@ -614,9 +792,10 @@ const submitUnitZoomSchedule = (mod) => {
 };
 
 const startUnitZoomNow = (mod) => {
+    const dayNum = mod.day_number || 1;
     if (
         confirm(
-            `Mulai sesi Online Meeting untuk Unit "${mod.title}" (Hari ke-${mod.day_number || 1}) sekarang? Status kelas akan LIVE dan peserta dapat bergabung ke Online Meeting.`,
+            `Mulai sesi Online Meeting untuk Hari ke-${dayNum} sekarang? Status kelas akan LIVE dan peserta dapat bergabung ke Online Meeting.`,
         )
     ) {
         isStartingUnitZoom.value[mod.id] = true;
@@ -626,22 +805,31 @@ const startUnitZoomNow = (mod) => {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    mod.zoom_status = "live";
-                    mod.zoom_start_at = new Date().toISOString();
-                    if (
+                    const nowIso = new Date().toISOString();
+                    const endIso =
                         !mod.zoom_end_at ||
                         new Date(mod.zoom_end_at).getTime() <= Date.now()
-                    ) {
-                        mod.zoom_end_at = new Date(
-                            Date.now() + 2 * 60 * 60 * 1000,
-                        ).toISOString();
-                    }
-                    const endMs = new Date(mod.zoom_end_at).getTime();
-                    unitZoomTimers.value[mod.id] = Math.max(
+                            ? new Date(
+                                  Date.now() + 2 * 60 * 60 * 1000,
+                              ).toISOString()
+                            : mod.zoom_end_at;
+                    const endMs = new Date(endIso).getTime();
+                    const remSec = Math.max(
                         0,
                         Math.floor((endMs - Date.now()) / 1000),
                     );
-                    isEditingZoomEnded.value[mod.id] = false;
+
+                    if (props.course?.modules) {
+                        props.course.modules.forEach((m) => {
+                            if ((m.day_number || 1) === dayNum) {
+                                m.zoom_status = "live";
+                                m.zoom_start_at = nowIso;
+                                m.zoom_end_at = endIso;
+                                unitZoomTimers.value[m.id] = remSec;
+                                isEditingZoomEnded.value[m.id] = false;
+                            }
+                        });
+                    }
                 },
                 onFinish: () => {
                     isStartingUnitZoom.value[mod.id] = false;
@@ -652,9 +840,10 @@ const startUnitZoomNow = (mod) => {
 };
 
 const endUnitZoomNow = (mod) => {
+    const dayNum = mod.day_number || 1;
     if (
         confirm(
-            `Akhiri sesi Online Meeting untuk Unit "${mod.title}" sekarang? Sesi Online Meeting unit ini akan ditutup dan peserta terlambat dapat mengakses materi mandiri.`,
+            `Akhiri sesi Online Meeting untuk Hari ke-${dayNum} sekarang? Sesi Online Meeting hari ini akan ditutup dan peserta terlambat dapat mengakses materi mandiri.`,
         )
     ) {
         isEndingUnitZoom.value[mod.id] = true;
@@ -664,11 +853,18 @@ const endUnitZoomNow = (mod) => {
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    mod.zoom_status = "ended";
-                    mod.zoom_end_at = new Date().toISOString();
-                    unitZoomTimers.value[mod.id] = 0;
-                    isEditingZoomEnded.value[mod.id] = false;
-                    isEditingZoomLive.value[mod.id] = false;
+                    const nowIso = new Date().toISOString();
+                    if (props.course?.modules) {
+                        props.course.modules.forEach((m) => {
+                            if ((m.day_number || 1) === dayNum) {
+                                m.zoom_status = "ended";
+                                m.zoom_end_at = nowIso;
+                                unitZoomTimers.value[m.id] = 0;
+                                isEditingZoomEnded.value[m.id] = false;
+                                isEditingZoomLive.value[m.id] = false;
+                            }
+                        });
+                    }
                 },
                 onFinish: () => {
                     isEndingUnitZoom.value[mod.id] = false;
@@ -679,6 +875,7 @@ const endUnitZoomNow = (mod) => {
 };
 
 const openUnitAttendanceWithDuration = (mod, durationMinutes) => {
+    const dayNum = mod.day_number || 1;
     isOpeningUnitAttendance.value[mod.id] = true;
     router.post(
         `/admin/lms/modules/${mod.id}/zoom/attendance/open`,
@@ -686,12 +883,20 @@ const openUnitAttendanceWithDuration = (mod, durationMinutes) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                isOpeningAttendanceSusulan.value[mod.id] = false;
-                mod.is_attendance_open_now = true;
-                mod.zoom_attendance_closed_at = new Date(
+                const closedIso = new Date(
                     Date.now() + durationMinutes * 60 * 1000,
                 ).toISOString();
-                unitAttendanceTimers.value[mod.id] = durationMinutes * 60;
+                const remSec = durationMinutes * 60;
+                if (props.course?.modules) {
+                    props.course.modules.forEach((m) => {
+                        if ((m.day_number || 1) === dayNum) {
+                            m.is_attendance_open_now = true;
+                            m.zoom_attendance_closed_at = closedIso;
+                            unitAttendanceTimers.value[m.id] = remSec;
+                            isOpeningAttendanceSusulan.value[m.id] = false;
+                        }
+                    });
+                }
             },
             onFinish: () => {
                 isOpeningUnitAttendance.value[mod.id] = false;
@@ -701,9 +906,10 @@ const openUnitAttendanceWithDuration = (mod, durationMinutes) => {
 };
 
 const closeUnitAttendanceNow = (mod) => {
+    const dayNum = mod.day_number || 1;
     if (
         !confirm(
-            `Yakin ingin menutup sesi absensi untuk Unit "${mod.title}" sekarang? Tombol absen di kelas peserta untuk unit ini akan dinonaktifkan.`,
+            `Yakin ingin menutup sesi absensi untuk Hari ke-${dayNum} sekarang? Tombol absen di kelas peserta untuk hari ini akan dinonaktifkan.`,
         )
     ) {
         return;
@@ -715,10 +921,17 @@ const closeUnitAttendanceNow = (mod) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                unitAttendanceTimers.value[mod.id] = 0;
-                mod.is_attendance_open_now = false;
-                mod.zoom_attendance_closed_at = new Date().toISOString();
-                isOpeningAttendanceSusulan.value[mod.id] = false;
+                const nowIso = new Date().toISOString();
+                if (props.course?.modules) {
+                    props.course.modules.forEach((m) => {
+                        if ((m.day_number || 1) === dayNum) {
+                            unitAttendanceTimers.value[m.id] = 0;
+                            m.is_attendance_open_now = false;
+                            m.zoom_attendance_closed_at = nowIso;
+                            isOpeningAttendanceSusulan.value[m.id] = false;
+                        }
+                    });
+                }
             },
             onFinish: () => {
                 isOpeningUnitAttendance.value[mod.id] = false;
@@ -736,9 +949,16 @@ const extendUnitAttendance = (mod, extraMinutes = 15) => {
 
 const selectUnitAttendanceDuration = (mod, mins) => {
     const val = parseInt(mins, 10) || 30;
-    unitSelectedDuration.value[mod.id] = val;
-    if (unitScheduledAttendanceForm.value[mod.id]) {
-        unitScheduledAttendanceForm.value[mod.id].duration_minutes = val;
+    const dayNum = mod.day_number || 1;
+    if (props.course?.modules) {
+        props.course.modules.forEach((m) => {
+            if ((m.day_number || 1) === dayNum) {
+                unitSelectedDuration.value[m.id] = val;
+                if (unitScheduledAttendanceForm.value[m.id]) {
+                    unitScheduledAttendanceForm.value[m.id].duration_minutes = val;
+                }
+            }
+        });
     }
 };
 
@@ -750,6 +970,8 @@ const submitUnitScheduleAttendance = (mod) => {
         10,
     );
     f.duration_minutes = dur;
+    const dayNum = mod.day_number || 1;
+
     router.post(
         `/admin/lms/modules/${mod.id}/zoom/attendance/schedule`,
         {
@@ -759,20 +981,37 @@ const submitUnitScheduleAttendance = (mod) => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                isOpeningAttendanceSusulan.value[mod.id] = false;
-                mod.zoom_attendance_scheduled_at = f.scheduled_at;
-                mod.zoom_attendance_duration_minutes = dur;
-                mod.zoom_attendance_closed_at = null;
-                unitSelectedDuration.value[mod.id] = dur;
                 const schedTime = new Date(f.scheduled_at).getTime();
                 const durationMs = dur * 60 * 1000;
                 const now = Date.now();
-                if (now >= schedTime && now <= schedTime + durationMs) {
-                    unitAttendanceTimers.value[mod.id] = Math.max(
-                        0,
-                        Math.floor((schedTime + durationMs - now) / 1000),
-                    );
-                    mod.is_attendance_open_now = true;
+                const isActive = now >= schedTime && now <= schedTime + durationMs;
+                const remSec = isActive
+                    ? Math.max(0, Math.floor((schedTime + durationMs - now) / 1000))
+                    : 0;
+
+                if (props.course?.modules) {
+                    props.course.modules.forEach((m) => {
+                        if ((m.day_number || 1) === dayNum) {
+                            isOpeningAttendanceSusulan.value[m.id] = false;
+                            m.zoom_attendance_scheduled_at = f.scheduled_at;
+                            m.zoom_attendance_duration_minutes = dur;
+                            m.zoom_attendance_closed_at = null;
+                            if (m.zoom_status === "ended") {
+                                m.zoom_status = "upcoming";
+                            }
+                            unitSelectedDuration.value[m.id] = dur;
+                            if (unitScheduledAttendanceForm.value[m.id]) {
+                                unitScheduledAttendanceForm.value[m.id].scheduled_at =
+                                    f.scheduled_at;
+                                unitScheduledAttendanceForm.value[m.id].duration_minutes =
+                                    dur;
+                            }
+                            if (isActive) {
+                                unitAttendanceTimers.value[m.id] = remSec;
+                                m.is_attendance_open_now = true;
+                            }
+                        }
+                    });
                 }
             },
         },
@@ -1621,6 +1860,12 @@ const isUnitAttendanceActive = (mod) => {
 const isUnitAttendanceEnded = (mod) => {
     if (!mod) return false;
     if (isUnitAttendanceActive(mod)) return false;
+    if (mod.zoom_attendance_scheduled_at) {
+        const schedTime = new Date(mod.zoom_attendance_scheduled_at).getTime();
+        const durationMs =
+            (mod.zoom_attendance_duration_minutes || 30) * 60 * 1000;
+        if (Date.now() < schedTime + durationMs) return false;
+    }
     if (mod.zoom_attendance_closed_at) return true;
     if (mod.zoom_status === "ended") return true;
     if (mod.zoom_attendance_opened_at && !mod.is_attendance_open_now)
@@ -1629,7 +1874,7 @@ const isUnitAttendanceEnded = (mod) => {
         const schedTime = new Date(mod.zoom_attendance_scheduled_at).getTime();
         const durationMs =
             (mod.zoom_attendance_duration_minutes || 30) * 60 * 1000;
-        if (Date.now() > schedTime + durationMs) return true;
+        if (Date.now() >= schedTime + durationMs) return true;
     }
     return false;
 };
@@ -1777,20 +2022,6 @@ const formatReadableDate = (dateStr) => {
     });
 };
 
-const formatDateIndo = (dateStr) => {
-    if (!dateStr) return "Belum Ditentukan";
-    try {
-        const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return dateStr;
-        return d.toLocaleDateString("id-ID", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-        });
-    } catch (e) {
-        return dateStr;
-    }
-};
 
 const calculateDurationDays = (startDate, endDate) => {
     if (!startDate || !endDate) return null;
@@ -2706,9 +2937,9 @@ const uploadTemplateImage = (e) => {
                                     <span
                                         class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
                                     >
-                                        WITA:
-                                        {{ formatDateIndo(todayWita) }} (Hari
-                                        ke-{{ todayDayNumber }})
+                                        WITA Hari Ini: {{ formatDateIndo(todayWita) }}
+                                        <template v-if="todayDayNumber"> (Hari ke-{{ todayDayNumber }})</template>
+                                        <template v-else-if="courseStatusRelative"> &bull; {{ courseStatusRelative }}</template>
                                     </span>
                                     <span
                                         v-if="
@@ -2746,25 +2977,22 @@ const uploadTemplateImage = (e) => {
                                     v-model="selectedScheduleFilter"
                                     class="w-full text-xs font-bold py-2.5 pl-3 pr-8 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 shadow-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                                 >
-                                    <option value="today">
+                                    <option value="all">
+                                        📅 Tampilkan Semua Hari ({{ distinctDays.length }} Hari &bull; {{ course.modules?.length || 0 }} Unit)
+                                    </option>
+                                    <option v-if="todayDayNumber" value="today">
                                         🌟 Hari Ini (Hari ke-{{
                                             todayDayNumber
                                         }}
                                         &bull; {{ formatDateIndo(todayWita) }})
                                     </option>
-                                    <option value="all">
-                                        📅 Tampilkan Semua Hari / Semua Unit ({{
-                                            course.modules?.length || 0
-                                        }}
-                                        Unit)
-                                    </option>
-                                    <optgroup label="Pilih Hari Spesifik:">
+                                    <optgroup label="Pilih Hari Pelatihan:">
                                         <option
                                             v-for="d in distinctDays"
                                             :key="d"
                                             :value="'day_' + d"
                                         >
-                                            Hari ke-{{ d }} ({{
+                                            Hari ke-{{ d }} &bull; {{ formatDateIndo(getDateForDayNumber(d)) }} ({{
                                                 countUnitsForDay(d)
                                             }}
                                             Unit Kompetensi)
@@ -2805,7 +3033,7 @@ const uploadTemplateImage = (e) => {
                 <div
                     v-if="
                         selectedScheduleFilter === 'today' &&
-                        filteredModules.length === 0
+                        groupedModulesByDay.length === 0
                     "
                     class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-2xl p-6 text-center space-y-3"
                 >
@@ -2814,17 +3042,20 @@ const uploadTemplateImage = (e) => {
                         <h4
                             class="text-sm font-bold text-amber-900 dark:text-amber-200"
                         >
-                            Tidak Ada Unit Kompetensi Terjadwal Hari Ini (Hari
-                            ke-{{ todayDayNumber }})
+                            Tidak Ada Unit Kompetensi Terjadwal Hari Ini
+                            <template v-if="todayDayNumber"> (Hari ke-{{ todayDayNumber }})</template>
                         </h4>
                         <p
                             class="text-xs text-amber-700 dark:text-amber-300 mt-1 max-w-lg mx-auto"
                         >
                             Hari ini adalah {{ formatDateIndo(todayWita) }}.
-                            Belum ada unit kompetensi yang diset untuk Hari
-                            ke-{{ todayDayNumber }}. Anda dapat melihat unit di
-                            hari lain melalui dropdown di atas atau klik tombol
-                            berikut untuk melihat seluruh unit.
+                            <template v-if="todayDayNumber">
+                                Belum ada unit kompetensi yang diset untuk Hari ke-{{ todayDayNumber }}.
+                            </template>
+                            <template v-else-if="courseStatusRelative">
+                                Status kelas: {{ courseStatusRelative }}.
+                            </template>
+                            Anda dapat melihat unit di hari lain melalui dropdown di atas atau klik tombol berikut untuk melihat seluruh unit.
                         </p>
                     </div>
                     <div class="flex items-center justify-center gap-2 pt-1">
@@ -2840,166 +3071,75 @@ const uploadTemplateImage = (e) => {
                             @click="openAddModuleModal"
                             class="px-4 py-2 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-xl text-xs font-bold hover:bg-amber-100 transition"
                         >
-                            + Tambah Unit untuk Hari ke-{{ todayDayNumber }}
+                            + Tambah Unit untuk Hari ke-{{ todayDayNumber || 1 }}
                         </button>
                     </div>
                 </div>
 
-                <!-- Per-Unit Competency Cards (Filtered by Dropdown) -->
-                <div v-if="filteredModules.length > 0" class="space-y-6">
+            <!-- Grouped by Day (Filtered by Dropdown) -->
+                <div v-if="groupedModulesByDay.length > 0" class="space-y-8">
                     <div
-                        v-for="(mod, modIdx) in filteredModules"
-                        :key="mod.id"
-                        class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm space-y-5 p-5 md:p-6"
+                        v-for="dayGroup in groupedModulesByDay"
+                        :key="dayGroup.day_number"
+                        class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden"
                     >
-                        <!-- Unit Header Bar -->
+                        <!-- Day Group Header -->
                         <div
-                            class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4"
+                            class="bg-slate-50/90 dark:bg-slate-800/60 px-5 md:px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3"
                         >
-                            <div class="flex items-start gap-3">
+                            <div class="flex items-center gap-3">
                                 <span
-                                    class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black shrink-0 tracking-wider shadow-sm"
+                                    class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black tracking-wider shadow-sm flex items-center gap-1.5"
                                 >
-                                    HARI {{ mod.day_number || modIdx + 1 }}
+                                    <Calendar class="w-3.5 h-3.5" />
+                                    <span>HARI KE-{{ dayGroup.day_number }}</span>
                                 </span>
                                 <div>
-                                    <div
-                                        class="flex flex-wrap items-center gap-2"
-                                    >
-                                        <span
-                                            class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded"
+                                    <div class="flex items-center gap-2">
+                                        <h3
+                                            class="text-sm font-bold text-slate-900 dark:text-white"
                                         >
-                                            Unit Kompetensi {{ modIdx + 1 }}
-                                        </span>
+                                            Kegiatan Pelatihan Hari Ke-{{ dayGroup.day_number }}
+                                        </h3>
                                         <span
-                                            v-if="
-                                                mod.delivery_mode ===
-                                                'sinkronus'
-                                            "
-                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full"
+                                            v-if="dayGroup.scheduled_date || getDateForDayNumber(dayGroup.day_number)"
+                                            class="text-xs text-slate-500 dark:text-slate-400 font-medium"
                                         >
-                                            <Video
-                                                class="w-3 h-3 text-blue-500"
-                                            />
-                                            <span
-                                                >Sinkronus (Live Online
-                                                Meeting)</span
-                                            >
-                                            <span v-if="mod.scheduled_date"
-                                                >&bull;
-                                                {{
-                                                    formatDateIndo(
-                                                        mod.scheduled_date,
-                                                    )
-                                                }}</span
-                                            >
-                                            <span
-                                                v-if="
-                                                    mod.start_time &&
-                                                    mod.end_time
-                                                "
-                                                >({{ mod.start_time }} -
-                                                {{ mod.end_time }})</span
-                                            >
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            <BookOpen
-                                                class="w-3 h-3 text-emerald-500"
-                                            />
-                                            <span
-                                                >Asinkronus &bull;
-                                                {{ mod.duration_days || 1 }}
-                                                Hari</span
-                                            >
-                                        </span>
-                                        <span
-                                            v-if="
-                                                (mod.quizzes?.length ||
-                                                    (mod.quiz ? 1 : 0)) > 0
-                                            "
-                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            <HelpCircle
-                                                class="w-3 h-3 text-amber-500"
-                                            />
-                                            <span
-                                                >{{
-                                                    mod.quizzes?.length || 1
-                                                }}
-                                                Kuis</span
-                                            >
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            Tanpa Kuis
+                                            &bull; {{ formatDateIndo(dayGroup.scheduled_date || getDateForDayNumber(dayGroup.day_number)) }}
                                         </span>
                                     </div>
-                                    <h3
-                                        class="text-base font-bold text-slate-900 dark:text-white mt-1"
-                                    >
-                                        {{ mod.title }}
-                                    </h3>
                                     <p
-                                        v-if="mod.description"
-                                        class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"
+                                        class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5"
                                     >
-                                        {{ mod.description }}
+                                        Memuat {{ dayGroup.modules.length }} Unit Kompetensi &bull;
+                                        <span
+                                            :class="
+                                                dayGroup.hasSinkronus
+                                                    ? 'text-blue-600 dark:text-blue-400 font-bold'
+                                                    : 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                            "
+                                        >
+                                            {{
+                                                dayGroup.hasSinkronus
+                                                    ? 'Tatap Muka Online (Sinkronus)'
+                                                    : 'Belajar Mandiri (Asinkronus)'
+                                            }}
+                                        </span>
                                     </p>
                                 </div>
                             </div>
-
-                            <!-- Unit Actions: + Lesson, Quiz, Edit, Delete -->
-                            <div
-                                class="flex items-center gap-2 self-start lg:self-center flex-wrap"
-                            >
-                                <button
-                                    type="button"
-                                    @click="openAddLessonModal(mod.id)"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-lg text-xs font-bold transition"
-                                >
-                                    <Plus class="w-3.5 h-3.5" />
-                                    <span>+ Elemen</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="openQuizModal(mod, null)"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                                >
-                                    <HelpCircle
-                                        class="w-3.5 h-3.5 text-amber-500"
-                                    />
-                                    <span>+ Kuis</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="openEditModuleModal(mod)"
-                                    class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
-                                    title="Edit Unit Kompetensi"
-                                >
-                                    <Edit class="w-4 h-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="deleteModule(mod)"
-                                    :disabled="deletingModuleId === mod.id"
-                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition disabled:opacity-50"
-                                    title="Hapus Unit Kompetensi"
-                                >
-                                    <Loader2
-                                        v-if="deletingModuleId === mod.id"
-                                        class="w-4 h-4 animate-spin text-rose-600"
-                                    />
-                                    <Trash2 v-else class="w-4 h-4" />
-                                </button>
-                            </div>
                         </div>
 
-                        <!-- Per-Unit Zoom & Attendance Panel (For Sinkronus Units) -->
+                        <!-- One Shared Zoom & Attendance Setting Panel per Day (if day has Sinkronus) -->
+                        <div
+                            v-if="dayGroup.hasSinkronus"
+                            class="p-5 md:p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40"
+                        >
+                            <template
+                                v-for="mod in [dayGroup.primaryModule]"
+                                :key="mod.id"
+                            >
+                                <!-- Per-Unit Zoom & Attendance Panel (For Sinkronus Units) -->
                         <div
                             v-if="mod.delivery_mode === 'sinkronus'"
                             class="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-1"
@@ -3033,7 +3173,7 @@ const uploadTemplateImage = (e) => {
                                         <h4
                                             class="text-xs font-bold text-slate-800 dark:text-slate-200"
                                         >
-                                            Jadwal & Tautan Online Meeting
+                                            Jadwal & Tautan Online Meeting Hari Ke-{{ dayGroup.day_number }}
                                         </h4>
                                     </div>
                                     <!-- Zoom Status Badge -->
@@ -3538,8 +3678,7 @@ const uploadTemplateImage = (e) => {
                                         <h4
                                             class="text-xs font-bold text-slate-800 dark:text-slate-200"
                                         >
-                                            Kontrol Presensi / Absen Online Unit
-                                            Ini
+                                            Kontrol Presensi / Absen Online Hari Ke-{{ dayGroup.day_number }}
                                         </h4>
                                     </div>
 
@@ -3867,45 +4006,182 @@ const uploadTemplateImage = (e) => {
                                 </div>
                             </div>
                         </div>
+                            </template>
+                        </div>
 
-                        <!-- Info Card when Mode is Asinkronus -->
+                        <!-- Info Banner when entire Day is Asinkronus -->
                         <div
                             v-else
-                            class="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                            class="p-4 mx-5 md:mx-6 my-4 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 rounded-xl flex items-center gap-3"
                         >
-                            <div class="flex items-center gap-3">
+                            <BookOpen class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <div class="text-xs text-emerald-800 dark:text-emerald-300">
+                                <span class="font-bold">Hari Pembelajaran Mandiri (Asinkronus):</span>
+                                Seluruh unit kompetensi pada hari ini diselesaikan oleh peserta secara mandiri melalui materi dan evaluasi di bawah.
+                            </div>
+                        </div>
+
+                        <!-- Unit Cards belonging to this Day -->
+                        <div class="p-5 md:p-6 space-y-6 bg-white dark:bg-slate-900">
+                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
+                                <h4 class="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                                    <Layers class="w-4 h-4 text-indigo-500" />
+                                    <span>Daftar Unit Kompetensi Hari Ke-{{ dayGroup.day_number }} ({{ dayGroup.modules.length }} Unit)</span>
+                                </h4>
+                            </div>
+
+                            <div
+                                v-for="(mod, modIdx) in dayGroup.modules"
+                                :key="mod.id"
+                                class="bg-slate-50/60 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 md:p-6 space-y-5 transition shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700"
+                            >
+                                <!-- Unit Header Bar -->
+                        <div
+                            class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4"
+                        >
+                            <div class="flex items-start gap-3">
                                 <span
-                                    class="p-2 bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 rounded-lg"
+                                    class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black shrink-0 tracking-wider shadow-sm"
                                 >
-                                    <BookOpen class="w-5 h-5" />
+                                    Unit {{ getOverallModuleIndex(mod) }}
                                 </span>
                                 <div>
-                                    <h4
-                                        class="text-xs font-bold text-emerald-900 dark:text-emerald-200"
+                                    <div
+                                        class="flex flex-wrap items-center gap-2"
                                     >
-                                        Mode Pembelajaran Mandiri (Asinkronus)
-                                        &bull; {{ mod.duration_days || 1 }} Hari
-                                    </h4>
+                                        <span
+                                            class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded"
+                                        >
+                                            Unit Kompetensi {{ getOverallModuleIndex(mod) }}
+                                        </span>
+                                        <span
+                                            v-if="
+                                                mod.delivery_mode ===
+                                                'sinkronus'
+                                            "
+                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full"
+                                        >
+                                            <Video
+                                                class="w-3 h-3 text-blue-500"
+                                            />
+                                            <span
+                                                >Sinkronus (Live Online
+                                                Meeting)</span
+                                            >
+                                            <span v-if="mod.scheduled_date"
+                                                >&bull;
+                                                {{
+                                                    formatDateIndo(
+                                                        mod.scheduled_date,
+                                                    )
+                                                }}</span
+                                            >
+                                            <span
+                                                v-if="
+                                                    mod.start_time &&
+                                                    mod.end_time
+                                                "
+                                                >({{ mod.start_time }} -
+                                                {{ mod.end_time }})</span
+                                            >
+                                        </span>
+                                        <span
+                                            v-else
+                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full"
+                                        >
+                                            <BookOpen
+                                                class="w-3 h-3 text-emerald-500"
+                                            />
+                                            <span
+                                                >Asinkronus &bull;
+                                                {{ mod.duration_days || 1 }}
+                                                Hari</span
+                                            >
+                                        </span>
+                                        <span
+                                            v-if="
+                                                (mod.quizzes?.length ||
+                                                    (mod.quiz ? 1 : 0)) > 0
+                                            "
+                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full"
+                                        >
+                                            <HelpCircle
+                                                class="w-3 h-3 text-amber-500"
+                                            />
+                                            <span
+                                                >{{
+                                                    mod.quizzes?.length || 1
+                                                }}
+                                                Kuis</span
+                                            >
+                                        </span>
+                                        <span
+                                            v-else
+                                            class="text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full"
+                                        >
+                                            Tanpa Kuis
+                                        </span>
+                                    </div>
+                                    <h3
+                                        class="text-base font-bold text-slate-900 dark:text-white mt-1"
+                                    >
+                                        {{ mod.title }}
+                                    </h3>
                                     <p
-                                        class="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5"
+                                        v-if="mod.description"
+                                        class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"
                                     >
-                                        {{
-                                            mod.notes ||
-                                            "Peserta mempelajari materi unit kompetensi ini secara mandiri melalui teks, video, atau modul grafis di bawah."
-                                        }}
+                                        {{ mod.description }}
                                     </p>
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                @click="openEditModuleModal(mod)"
-                                class="px-3 py-1.5 text-xs font-bold bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 rounded-lg hover:bg-emerald-100 transition whitespace-nowrap"
-                            >
-                                Ubah ke Sinkronus / Atur Jadwal
-                            </button>
-                        </div>
 
-                        <!-- Elemen Kompetensi (Lessons) List under this Unit -->
+                            <!-- Unit Actions: + Lesson, Quiz, Edit, Delete -->
+                            <div
+                                class="flex items-center gap-2 self-start lg:self-center flex-wrap"
+                            >
+                                <button
+                                    type="button"
+                                    @click="openAddLessonModal(mod.id)"
+                                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-lg text-xs font-bold transition"
+                                >
+                                    <Plus class="w-3.5 h-3.5" />
+                                    <span>+ Elemen</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="openQuizModal(mod, null)"
+                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                >
+                                    <HelpCircle
+                                        class="w-3.5 h-3.5 text-amber-500"
+                                    />
+                                    <span>+ Kuis</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="openEditModuleModal(mod)"
+                                    class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                                    title="Edit Unit Kompetensi"
+                                >
+                                    <Edit class="w-4 h-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="deleteModule(mod)"
+                                    :disabled="deletingModuleId === mod.id"
+                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition disabled:opacity-50"
+                                    title="Hapus Unit Kompetensi"
+                                >
+                                    <Loader2
+                                        v-if="deletingModuleId === mod.id"
+                                        class="w-4 h-4 animate-spin text-rose-600"
+                                    />
+                                    <Trash2 v-else class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                                <!-- Elemen Kompetensi (Lessons) List under this Unit -->
                         <div
                             class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2"
                         >
@@ -3939,7 +4215,7 @@ const uploadTemplateImage = (e) => {
                                         <span
                                             class="text-xs font-bold text-slate-400 w-6 text-right shrink-0"
                                         >
-                                            {{ modIdx + 1 }}.{{ lesIdx + 1 }}
+                                            {{ getOverallModuleIndex(mod) }}.{{ lesIdx + 1 }}
                                         </span>
                                         <span
                                             class="p-1.5 rounded-lg shrink-0"
@@ -4177,10 +4453,12 @@ const uploadTemplateImage = (e) => {
                                 </button>
                             </div>
                         </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Empty State if No Modules in course at all -->
+                    <!-- Empty State if No Modules in course at all -->
                 <div
                     v-else-if="!course.modules || course.modules.length === 0"
                     class="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-10 text-center"

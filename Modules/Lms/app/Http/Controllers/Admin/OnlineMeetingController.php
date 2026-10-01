@@ -295,6 +295,7 @@ class OnlineMeetingController extends Controller
             'zoom_link' => 'nullable|string|max:500',
             'zoom_meeting_id' => 'nullable|string|max:100',
             'zoom_passcode' => 'nullable|string|max:100',
+            'zoom_status' => 'nullable|string|in:upcoming,live,ended,unscheduled',
         ]);
 
         // If scheduled_date and start_time / end_time provided, build zoom_start_at and zoom_end_at
@@ -332,7 +333,40 @@ class OnlineMeetingController extends Controller
             $validated['scheduled_date'] = null;
         }
 
+        // When rescheduling or explicit zoom_status provided, reset status and reopen closed state
+        if (! empty($validated['zoom_status'])) {
+            // explicit
+        } elseif (! empty($validated['scheduled_date']) || ! empty($validated['zoom_start_at'])) {
+            $validated['zoom_status'] = 'upcoming';
+        }
+
+        $validated['zoom_attendance_closed_at'] = null;
+
         $module->update($validated);
+
+        // SYNC TO ALL SIBLING MODULES IN THE SAME COURSE WITH THE SAME DAY NUMBER
+        $dayNumber = $validated['day_number'] ?? $module->day_number ?? 1;
+        $siblingModules = Module::where('course_id', $module->course_id)
+            ->where('id', '!=', $module->id)
+            ->where(function ($q) use ($dayNumber) {
+                $q->where('day_number', $dayNumber);
+            })
+            ->get();
+
+        foreach ($siblingModules as $sib) {
+            $sib->update([
+                'scheduled_date' => $validated['scheduled_date'] ?? $module->scheduled_date,
+                'start_time' => $validated['start_time'] ?? $module->start_time,
+                'end_time' => $validated['end_time'] ?? $module->end_time,
+                'zoom_start_at' => $validated['zoom_start_at'] ?? $module->zoom_start_at,
+                'zoom_end_at' => $validated['zoom_end_at'] ?? $module->zoom_end_at,
+                'zoom_link' => $validated['zoom_link'] ?? $module->zoom_link,
+                'zoom_meeting_id' => $validated['zoom_meeting_id'] ?? $module->zoom_meeting_id,
+                'zoom_passcode' => $validated['zoom_passcode'] ?? $module->zoom_passcode,
+                'zoom_status' => $validated['zoom_status'] ?? $module->zoom_status,
+                'zoom_attendance_closed_at' => null,
+            ]);
+        }
 
         // SYNC TO COURSE if course is single-day, or this is module 1, or this is today's module
         $course = $module->course;
@@ -355,10 +389,11 @@ class OnlineMeetingController extends Controller
             if (! empty($module->zoom_end_at)) {
                 $course->zoom_end_at = $module->zoom_end_at;
             }
+            $course->zoom_attendance_closed_at = null;
             $course->save();
         }
 
-        $message = "Jadwal & tautan Online Meeting untuk Unit '{$module->title}' berhasil disimpan.";
+        $message = "Jadwal & tautan Online Meeting untuk Hari ke-{$dayNumber} (Unit '{$module->title}') berhasil disimpan.";
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -387,6 +422,18 @@ class OnlineMeetingController extends Controller
         }
         $module->save();
 
+        // Sync to all modules on the same day
+        $siblingModules = Module::where('course_id', $module->course_id)
+            ->where('id', '!=', $module->id)
+            ->where('day_number', $module->day_number)
+            ->get();
+        foreach ($siblingModules as $sib) {
+            $sib->zoom_status = 'live';
+            $sib->zoom_start_at = $module->zoom_start_at;
+            $sib->zoom_end_at = $module->zoom_end_at;
+            $sib->save();
+        }
+
         $course = $module->course;
         if ($module->zoom_link) {
             $course->zoom_link = $module->zoom_link;
@@ -401,7 +448,7 @@ class OnlineMeetingController extends Controller
         $course->zoom_end_at = $module->zoom_end_at;
         $course->save();
 
-        $message = "Sesi Online Meeting Unit '{$module->title}' (Hari ke-{$module->day_number}) telah DIMULAI (Status: LIVE).";
+        $message = "Sesi Online Meeting Hari ke-{$module->day_number} (Unit '{$module->title}') telah DIMULAI (Status: LIVE).";
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -432,6 +479,20 @@ class OnlineMeetingController extends Controller
         }
         $module->save();
 
+        // Sync to all modules on the same day
+        $siblingModules = Module::where('course_id', $module->course_id)
+            ->where('id', '!=', $module->id)
+            ->where('day_number', $module->day_number)
+            ->get();
+        foreach ($siblingModules as $sib) {
+            $sib->zoom_status = 'ended';
+            $sib->zoom_end_at = $module->zoom_end_at;
+            if ($sib->is_attendance_open_now) {
+                $sib->zoom_attendance_closed_at = now();
+            }
+            $sib->save();
+        }
+
         $course = $module->course;
         $course->zoom_end_at = now();
         if ($course->is_attendance_open_now) {
@@ -440,7 +501,7 @@ class OnlineMeetingController extends Controller
         }
         $course->save();
 
-        $message = "Sesi Online Meeting Unit '{$module->title}' (Hari ke-{$module->day_number}) telah DIAKHIRI.";
+        $message = "Sesi Online Meeting Hari ke-{$module->day_number} (Unit '{$module->title}') telah DIAKHIRI.";
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -473,6 +534,18 @@ class OnlineMeetingController extends Controller
         $module->zoom_attendance_closed_at = now()->addMinutes($duration);
         $module->save();
 
+        // Sync to all modules on the same day
+        $siblingModules = Module::where('course_id', $module->course_id)
+            ->where('id', '!=', $module->id)
+            ->where('day_number', $module->day_number)
+            ->get();
+        foreach ($siblingModules as $sib) {
+            $sib->zoom_attendance_opened_at = $module->zoom_attendance_opened_at;
+            $sib->zoom_attendance_duration_minutes = $duration;
+            $sib->zoom_attendance_closed_at = $module->zoom_attendance_closed_at;
+            $sib->save();
+        }
+
         // Also sync to course so student classroom gets attendance trigger immediately
         $course = $module->course;
         $course->is_zoom_attendance_open = true;
@@ -481,7 +554,7 @@ class OnlineMeetingController extends Controller
         $course->zoom_attendance_closed_at = $module->zoom_attendance_closed_at;
         $course->save();
 
-        $message = "Sesi Absensi Online Meeting untuk Unit '{$module->title}' berhasil DIBUKA selama {$duration} menit (hingga {$module->zoom_attendance_closed_at->format('H:i')}).";
+        $message = "Sesi Absensi Online Meeting untuk Hari ke-{$module->day_number} (Unit '{$module->title}') berhasil DIBUKA selama {$duration} menit (hingga {$module->zoom_attendance_closed_at->format('H:i')}).";
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -511,13 +584,24 @@ class OnlineMeetingController extends Controller
         $module->zoom_attendance_scheduled_at = null;
         $module->save();
 
+        // Sync to all modules on the same day
+        $siblingModules = Module::where('course_id', $module->course_id)
+            ->where('id', '!=', $module->id)
+            ->where('day_number', $module->day_number)
+            ->get();
+        foreach ($siblingModules as $sib) {
+            $sib->zoom_attendance_closed_at = now();
+            $sib->zoom_attendance_scheduled_at = null;
+            $sib->save();
+        }
+
         $course = $module->course;
         $course->is_zoom_attendance_open = false;
         $course->zoom_attendance_closed_at = now();
         $course->zoom_attendance_scheduled_at = null;
         $course->save();
 
-        $message = "Sesi Absensi Online Meeting untuk Unit '{$module->title}' telah DITUTUP.";
+        $message = "Sesi Absensi Online Meeting untuk Hari ke-{$module->day_number} (Unit '{$module->title}') telah DITUTUP.";
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -550,8 +634,29 @@ class OnlineMeetingController extends Controller
         if ($module->zoom_attendance_scheduled_at) {
             $module->zoom_attendance_closed_at = null;
             $module->zoom_attendance_opened_at = null;
+            if ($module->zoom_status === 'ended') {
+                $module->zoom_status = 'upcoming';
+            }
         }
         $module->save();
+
+        // Sync to all modules on the same day
+        $siblingModules = Module::where('course_id', $module->course_id)
+            ->where('id', '!=', $module->id)
+            ->where('day_number', $module->day_number)
+            ->get();
+        foreach ($siblingModules as $sib) {
+            $sib->zoom_attendance_scheduled_at = $module->zoom_attendance_scheduled_at;
+            $sib->zoom_attendance_duration_minutes = $module->zoom_attendance_duration_minutes;
+            if ($module->zoom_attendance_scheduled_at) {
+                $sib->zoom_attendance_closed_at = null;
+                $sib->zoom_attendance_opened_at = null;
+                if ($sib->zoom_status === 'ended') {
+                    $sib->zoom_status = 'upcoming';
+                }
+            }
+            $sib->save();
+        }
 
         $course = $module->course;
         $course->zoom_attendance_scheduled_at = $module->zoom_attendance_scheduled_at;
@@ -564,8 +669,8 @@ class OnlineMeetingController extends Controller
         $course->save();
 
         $message = $module->zoom_attendance_scheduled_at
-            ? "Jadwal absensi otomatis Online Meeting Unit '{$module->title}' berhasil disetel untuk {$module->zoom_attendance_scheduled_at->format('d M Y, H:i')} (Durasi: {$module->zoom_attendance_duration_minutes} menit)."
-            : "Jadwal absensi otomatis Online Meeting Unit '{$module->title}' telah dinonaktifkan.";
+            ? "Jadwal absensi otomatis Online Meeting Hari ke-{$module->day_number} (Unit '{$module->title}') berhasil disetel untuk {$module->zoom_attendance_scheduled_at->format('d M Y, H:i')} (Durasi: {$module->zoom_attendance_duration_minutes} menit)."
+            : "Jadwal absensi otomatis Online Meeting Hari ke-{$module->day_number} (Unit '{$module->title}') telah dinonaktifkan.";
 
         if ($request->wantsJson()) {
             return response()->json([

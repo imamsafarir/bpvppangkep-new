@@ -123,21 +123,49 @@ class Course extends Model
         return false;
     }
 
+    protected ?string $runtimeZoomStatus = null;
+
+    /**
+     * Mutator to prevent saving virtual zoom_status to database table lms_courses.
+     */
+    public function setZoomStatusAttribute($value): void
+    {
+        $this->runtimeZoomStatus = $value;
+    }
+
     /**
      * Get real-time status of Zoom / Online Meeting session: 'upcoming', 'live', 'ended', or 'unscheduled'.
      */
     public function getZoomStatusAttribute(): string
     {
+        if ($this->runtimeZoomStatus) {
+            return $this->runtimeZoomStatus;
+        }
+
+        $raw = $this->attributes['zoom_status'] ?? null;
+        if ($raw === 'ended') {
+            return 'ended';
+        }
+
         $startAt = $this->zoom_start_at;
         $endAt = $this->zoom_end_at;
 
         // Fallback to active module if course's own zoom_start_at is null or course has modules
         if ($this->relationLoaded('modules') && $this->modules->isNotEmpty()) {
+            $today = Carbon::now('Asia/Makassar')->toDateString();
+            $todayModule = $this->modules->first(function ($m) use ($today) {
+                return $m->scheduled_date && Carbon::parse($m->scheduled_date)->toDateString() === $today;
+            });
+
+            if ($todayModule && $todayModule->zoom_status !== 'unscheduled') {
+                return $todayModule->zoom_status;
+            }
+
             $activeModule = $this->modules->first(function ($m) {
                 return $m->zoom_status === 'live';
             }) ?: $this->modules->first(function ($m) {
                 return $m->zoom_status === 'upcoming';
-            }) ?: $this->modules->first();
+            });
 
             if ($activeModule && $activeModule->zoom_status !== 'unscheduled') {
                 return $activeModule->zoom_status;
@@ -145,7 +173,7 @@ class Course extends Model
         }
 
         if (! $startAt) {
-            return 'unscheduled';
+            return $raw ?: 'unscheduled';
         }
 
         $now = Carbon::now('Asia/Makassar');

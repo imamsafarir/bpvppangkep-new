@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>document.documentElement.classList.remove('dark');</script>
 
     @php
         $siteSettings = \Modules\Website\Models\WebsiteSetting::first();

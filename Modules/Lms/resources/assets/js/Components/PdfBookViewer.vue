@@ -618,7 +618,7 @@ onUnmounted(() => {
 <template>
     <div
         ref="viewerContainerRef"
-        class="pdf-book-viewer select-none transition-all flex flex-col rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-900 shadow-2xl relative"
+        class="pdf-book-viewer select-none transition-all flex flex-col rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-xl relative"
         :class="{
             'fixed inset-0 z-50 rounded-none border-none w-screen h-screen':
                 isFullscreen,
@@ -626,7 +626,7 @@ onUnmounted(() => {
         }"
     >
         <!-- Top Reading Progress Indicator Bar -->
-        <div class="w-full bg-slate-800/80 h-1.5 relative overflow-hidden">
+        <div class="w-full bg-slate-100 h-1.5 relative overflow-hidden">
             <div
                 class="h-full transition-all duration-300 ease-out"
                 :class="
@@ -640,19 +640,19 @@ onUnmounted(() => {
 
         <!-- Header Controls Bar -->
         <header
-            class="px-4 py-3 bg-slate-900/95 backdrop-blur border-b border-slate-800/80 flex flex-wrap items-center justify-between text-white z-10 gap-3"
+            class="px-4 py-3 bg-white/95 backdrop-blur border-b border-slate-200 flex flex-wrap items-center justify-between text-slate-800 z-10 gap-3"
         >
             <div class="flex items-center gap-2.5 min-w-0">
                 <span
-                    class="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 shrink-0 ring-1 ring-amber-500/30"
+                    class="p-1.5 rounded-lg bg-amber-50 text-amber-600 shrink-0 ring-1 ring-amber-200"
                 >
                     <BookOpen class="w-4 h-4" />
                 </span>
                 <div class="min-w-0">
-                    <h3 class="text-xs sm:text-sm font-bold truncate text-white">
+                    <h3 class="text-xs sm:text-sm font-bold truncate text-slate-900">
                         {{ title }}
                     </h3>
-                    <p class="text-[11px] text-slate-400 flex items-center gap-1.5">
+                    <p class="text-[11px] text-slate-500 flex items-center gap-1.5">
                         <span>{{ viewMode === 'slide' ? 'Mode Slide / Buku Digital' : 'Mode Dokumen Utuh' }}</span>
                         <span>&bull;</span>
                         <span v-if="totalPages > 0">
@@ -673,8 +673,8 @@ onUnmounted(() => {
                     class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer"
                     :class="
                         isFlipEnabled
-                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                            : 'bg-slate-800 text-slate-400 border-slate-700/60 hover:text-slate-200'
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900 hover:bg-slate-200'
                     "
                     :title="
                         isFlipEnabled
@@ -682,7 +682,7 @@ onUnmounted(() => {
                             : 'Animasi Lipatan Buku 3D Nonaktif (Klik untuk Nyalakan)'
                     "
                 >
-                    <Sparkles class="w-3.5 h-3.5" :class="isFlipEnabled ? 'text-amber-400 animate-pulse' : 'text-slate-400'" />
+                    <Sparkles class="w-3.5 h-3.5" :class="isFlipEnabled ? 'text-amber-600 animate-pulse' : 'text-slate-400'" />
                     <span class="hidden md:inline">{{ isFlipEnabled ? 'Lipatan Buku 3D' : 'Lipatan Mati' }}</span>
                 </button>
 
@@ -694,8 +694,8 @@ onUnmounted(() => {
                     class="p-1.5 rounded-lg border transition cursor-pointer"
                     :class="
                         isSoundEnabled
-                            ? 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                            : 'bg-slate-800 text-slate-400 border-slate-700/60 hover:text-slate-200'
+                            ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                            : 'bg-slate-100 text-slate-500 border-slate-200 hover:text-slate-800 hover:bg-slate-200'
                     "
                     :title="
                         isSoundEnabled
@@ -711,11 +711,11 @@ onUnmounted(() => {
                 <button
                     type="button"
                     @click="viewMode = viewMode === 'slide' ? 'embed' : 'slide'"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 transition cursor-pointer"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition cursor-pointer"
                     :title="viewMode === 'slide' ? 'Beralih ke Tampilan Dokumen Utuh (Bawaan Browser)' : 'Beralih ke Mode Slide / Buku Digital'"
                 >
-                    <FileText v-if="viewMode === 'slide'" class="w-3.5 h-3.5 text-indigo-400" />
-                    <BookOpen v-else class="w-3.5 h-3.5 text-amber-400" />
+                    <FileText v-if="viewMode === 'slide'" class="w-3.5 h-3.5 text-indigo-600" />
+                    <BookOpen v-else class="w-3.5 h-3.5 text-amber-600" />
                     <span class="hidden sm:inline">{{ viewMode === 'slide' ? 'Dokumen Utuh' : 'Mode Slide' }}</span>
                 </button>
 
@@ -723,7 +723,7 @@ onUnmounted(() => {
                 <a
                     :href="pdfUrl"
                     target="_blank"
-                    class="p-1.5 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg transition"
+                    class="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition"
                     title="Buka File Dokumen PDF di Tab Baru"
                 >
                     <ExternalLink class="w-4 h-4" />
@@ -732,13 +732,13 @@ onUnmounted(() => {
                 <!-- Zoom Controls (Slide Mode only) -->
                 <div
                     v-if="viewMode === 'slide'"
-                    class="hidden sm:flex items-center bg-slate-800/80 rounded-lg p-0.5 border border-slate-700/60"
+                    class="hidden sm:flex items-center bg-slate-100 rounded-lg p-0.5 border border-slate-200"
                 >
                     <button
                         type="button"
                         @click="zoomOut"
                         :disabled="zoomLevel <= 0.6 || isLoading"
-                        class="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700/60 rounded disabled:opacity-40 transition cursor-pointer"
+                        class="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded disabled:opacity-40 transition cursor-pointer"
                         title="Perkecil (-)"
                     >
                         <ZoomOut class="w-3.5 h-3.5" />
@@ -747,7 +747,7 @@ onUnmounted(() => {
                         type="button"
                         @click="resetZoom"
                         :disabled="isLoading"
-                        class="px-2 py-1 text-[11px] font-mono font-semibold text-slate-300 hover:text-white cursor-pointer"
+                        class="px-2 py-1 text-[11px] font-mono font-semibold text-slate-700 hover:text-slate-900 cursor-pointer"
                         title="Reset Zoom (100%)"
                     >
                         {{ Math.round(zoomLevel * 100) }}%
@@ -756,7 +756,7 @@ onUnmounted(() => {
                         type="button"
                         @click="zoomIn"
                         :disabled="zoomLevel >= 2.5 || isLoading"
-                        class="p-1.5 text-slate-300 hover:text-white hover:bg-slate-700/60 rounded disabled:opacity-40 transition cursor-pointer"
+                        class="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-white rounded disabled:opacity-40 transition cursor-pointer"
                         title="Perbesar (+)"
                     >
                         <ZoomIn class="w-3.5 h-3.5" />
@@ -785,12 +785,12 @@ onUnmounted(() => {
 
         <!-- Viewer Center Body -->
         <main
-            class="flex-1 bg-slate-950 flex flex-col items-center justify-center p-3 md:p-6 overflow-auto relative min-h-[460px]"
+            class="flex-1 bg-slate-100/80 flex flex-col items-center justify-center p-3 md:p-6 overflow-auto relative min-h-[460px]"
         >
             <!-- Loading Spinner Overlay -->
             <div
                 v-if="isLoading"
-                class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-sm gap-3 text-slate-300 p-6 text-center"
+                class="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/85 backdrop-blur-sm gap-3 text-slate-600 p-6 text-center"
             >
                 <Loader2 class="w-8 h-8 text-amber-500 animate-spin" />
                 <p class="text-xs font-medium tracking-wide">
@@ -801,18 +801,18 @@ onUnmounted(() => {
             <!-- Error State with Fallback -->
             <div
                 v-else-if="errorMessage && viewMode === 'slide'"
-                class="p-6 max-w-md text-center space-y-4 bg-rose-950/30 border border-rose-900/50 rounded-2xl text-rose-300 z-10"
+                class="p-6 max-w-md text-center space-y-4 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 z-10"
             >
-                <AlertCircle class="w-8 h-8 mx-auto text-rose-400" />
+                <AlertCircle class="w-8 h-8 mx-auto text-rose-500" />
                 <h4 class="text-sm font-bold">Gagal Menampilkan Slide</h4>
-                <p class="text-xs text-rose-300/80 leading-relaxed">
+                <p class="text-xs text-rose-700/80 leading-relaxed">
                     {{ errorMessage }}
                 </p>
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
                     <button
                         type="button"
                         @click="initDocument"
-                        class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold transition cursor-pointer"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition cursor-pointer shadow-sm"
                     >
                         <RefreshCw class="w-3.5 h-3.5" />
                         <span>Coba Muat Ulang</span>
@@ -979,9 +979,9 @@ onUnmounted(() => {
                     <!-- Page Rendering Subtle Overlay -->
                     <div
                         v-if="isRendering && !isFlipping"
-                        class="absolute inset-0 bg-slate-950/20 backdrop-blur-[1px] flex items-center justify-center rounded-xl transition-opacity pointer-events-none z-40"
+                        class="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px] flex items-center justify-center rounded-xl transition-opacity pointer-events-none z-40"
                     >
-                        <Loader2 class="w-6 h-6 text-indigo-400 animate-spin" />
+                        <Loader2 class="w-6 h-6 text-indigo-600 animate-spin" />
                     </div>
                 </div>
             </div>
@@ -993,12 +993,12 @@ onUnmounted(() => {
             >
                 <iframe
                     :src="pdfUrl + '#toolbar=1&navpanes=0'"
-                    class="w-full h-[580px] rounded-xl border border-slate-800 bg-white shadow-xl"
+                    class="w-full h-[580px] rounded-xl border border-slate-200 bg-white shadow-xl"
                 ></iframe>
                 <div
-                    class="w-full mt-3 p-3 bg-slate-900/80 border border-slate-800 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-2 text-xs"
+                    class="w-full mt-3 p-3 bg-white border border-slate-200 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-2 text-xs"
                 >
-                    <span class="text-slate-400">
+                    <span class="text-slate-600">
                         Mode Dokumen Utuh aktif. Anda dapat menggulir dan membaca seluruh isi materi PDF.
                     </span>
                     <button
@@ -1015,22 +1015,22 @@ onUnmounted(() => {
 
         <!-- Bottom Slide / Book Navigation Bar -->
         <footer
-            class="px-4 py-3 bg-slate-900/95 backdrop-blur border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3 text-white z-10"
+            class="px-4 py-3 bg-white/95 backdrop-blur border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-800 z-10"
         >
             <!-- Left: Reading Requirement Notice -->
             <div class="flex items-center gap-2 text-xs">
                 <div
                     v-if="hasCompleted"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold text-[11px]"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-[11px]"
                 >
                     <CheckCircle2 class="w-3.5 h-3.5 shrink-0" />
                     <span>Tuntas Membaca Seluruh Slide (100%)</span>
                 </div>
                 <div
                     v-else
-                    class="inline-flex items-center gap-1.5 text-amber-400 text-[11px] font-medium"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-medium"
                 >
-                    <Sparkles class="w-3.5 h-3.5 shrink-0 animate-pulse text-amber-400" />
+                    <Sparkles class="w-3.5 h-3.5 shrink-0 animate-pulse text-amber-600" />
                     <span>
                         Wajib membaca hingga slide terakhir ({{ totalPages || 1 }}) untuk
                         menyelesaikan materi ini.
@@ -1048,7 +1048,7 @@ onUnmounted(() => {
                     type="button"
                     @click="prevPage"
                     :disabled="currentPage <= 1 || isLoading"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-slate-800 hover:bg-slate-700 text-slate-200"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200"
                     title="Slide Sebelumnya (Panah Kiri &larr;)"
                 >
                     <ChevronLeft class="w-4 h-4" />
@@ -1057,11 +1057,11 @@ onUnmounted(() => {
 
                 <!-- Page Dropdown / Direct Selector -->
                 <div
-                    class="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/60 px-3 py-1.5 rounded-xl text-xs font-bold font-mono"
+                    class="flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold font-mono"
                 >
-                    <span class="text-amber-400">{{ currentPage }}</span>
-                    <span class="text-slate-500">/</span>
-                    <span class="text-slate-300">{{ totalPages || 1 }}</span>
+                    <span class="text-indigo-600">{{ currentPage }}</span>
+                    <span class="text-slate-400">/</span>
+                    <span class="text-slate-600">{{ totalPages || 1 }}</span>
                 </div>
 
                 <!-- Next Button -->
@@ -1082,7 +1082,7 @@ onUnmounted(() => {
 
 <style scoped>
 .pdf-book-viewer :fullscreen {
-    background-color: #020617;
+    background-color: #f1f5f9;
 }
 
 /* 3D Book Stage & Physics */

@@ -151,7 +151,11 @@ class ClassroomController extends Controller
             'today_module' => $todayModule,
             'tomorrow_module' => $tomorrowModule ?? $nextUpcomingModule,
             'today_mode' => $todayModule ? $todayModule->delivery_mode : ($course->zoom_start_at ? 'sinkronus' : 'asinkronus'),
-            'today_zoom_time' => $todayModule && $todayModule->start_time ? "{$todayModule->start_time} - {$todayModule->end_time} WITA" : ($course->zoom_start_at ? $course->zoom_start_at->format('H:i') . ' WITA' : null),
+            'today_zoom_time' => $todayModule && $todayModule->start_time
+                ? "{$todayModule->start_time}" . ($todayModule->end_time ? " - {$todayModule->end_time}" : "") . " WITA"
+                : ($todayModule && $todayModule->zoom_start_at
+                    ? $todayModule->zoom_start_at->format('H:i') . ($todayModule->zoom_end_at ? ' - ' . $todayModule->zoom_end_at->format('H:i') : '') . ' WITA'
+                    : ($course->zoom_start_at ? $course->zoom_start_at->format('H:i') . ($course->zoom_end_at ? ' - ' . $course->zoom_end_at->format('H:i') : '') . ' WITA' : null)),
             'today_notes' => $todayModule ? $todayModule->notes : null,
             'tomorrow_zoom_time' => ($tomorrowModule ?? $nextUpcomingModule) && ($tomorrowModule ?? $nextUpcomingModule)->delivery_mode === 'sinkronus' ? (($tomorrowModule ?? $nextUpcomingModule)->start_time . ' - ' . ($tomorrowModule ?? $nextUpcomingModule)->end_time . ' WITA') : null,
             'tomorrow_mode' => ($tomorrowModule ?? $nextUpcomingModule) ? ($tomorrowModule ?? $nextUpcomingModule)->delivery_mode : null,
@@ -177,9 +181,24 @@ class ClassroomController extends Controller
             }
             if ($todayModule->zoom_start_at) {
                 $course->zoom_start_at = $todayModule->zoom_start_at;
+            } elseif ($todayModule->start_time) {
+                try {
+                    $schedDate = $todayModule->scheduled_date ? $todayModule->scheduled_date->toDateString() : $today;
+                    $course->zoom_start_at = Carbon::parse("{$schedDate} {$todayModule->start_time}", 'Asia/Makassar');
+                } catch (\Throwable $e) {
+                }
             }
             if ($todayModule->zoom_end_at) {
                 $course->zoom_end_at = $todayModule->zoom_end_at;
+            } elseif ($todayModule->end_time) {
+                try {
+                    $schedDate = $todayModule->scheduled_date ? $todayModule->scheduled_date->toDateString() : $today;
+                    $course->zoom_end_at = Carbon::parse("{$schedDate} {$todayModule->end_time}", 'Asia/Makassar');
+                } catch (\Throwable $e) {
+                }
+            }
+            if ($todayModule->zoom_status) {
+                $course->zoom_status = $todayModule->zoom_status;
             }
             if ($todayModule->is_attendance_open_now) {
                 $course->is_zoom_attendance_open = true;
@@ -407,6 +426,21 @@ class ClassroomController extends Controller
 
             $targetModule = $todayModule ?: $allModules->first();
             $targetDayNumber = $targetModule ? ($targetModule->day_number ?? $todayDayNumber) : $todayDayNumber;
+
+            // If online meeting was scheduled today and hasn't ended yet, prevent premature self-study checkin
+            $isScheduled = false;
+            $hasEnded = false;
+            if ($todayModule) {
+                $isScheduled = (bool) ($todayModule->zoom_start_at || ($todayModule->scheduled_date && $todayModule->start_time));
+                $hasEnded = ($todayModule->zoom_status === 'ended');
+            } elseif ($course->zoom_start_at) {
+                $isScheduled = true;
+                $hasEnded = ($course->zoom_status === 'ended');
+            }
+
+            if ($isScheduled && ! $hasEnded) {
+                return back()->with('warning', 'Presensi susulan mandiri baru dapat dilakukan setelah waktu sesi tatap muka online yang dijadwalkan telah selesai.');
+            }
 
             if ($targetModule) {
                 \Modules\Lms\Models\ModuleAttendance::updateOrCreate(
