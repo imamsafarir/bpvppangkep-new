@@ -15,7 +15,7 @@ class SeoService
      */
     public function resolveMetadata(array $pageData = []): array
     {
-        $settings = WebsiteSetting::first();
+        $settings = \Illuminate\Support\Facades\Cache::remember('shared_website_settings', 3600, fn() => WebsiteSetting::first());
         $siteName = $settings?->website_name ?? 'BPVP Pangkep';
         if (empty($siteName) || $siteName === 'Laravel') {
             $siteName = 'BPVP Pangkep';

@@ -5,6 +5,7 @@ namespace Modules\Website\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -26,20 +27,35 @@ class WebsiteController extends Controller
      */
     public function home(): Response
     {
-        // Track kunjungan harian per IP
-        try {
-            Kunjungan::firstOrCreate([
-                'ip_address' => request()->ip(),
-                'tanggal'    => today(),
-            ]);
-        } catch (\Throwable $e) {
-            // Ignore DB uniqueness race condition
+        // Track kunjungan harian per IP (cached agar tidak query DB setiap refresh)
+        $clientIp = request()->ip();
+        $visitCacheKey = 'visitor_logged_' . md5($clientIp . '_' . date('Y-m-d'));
+        if (! Cache::has($visitCacheKey)) {
+            try {
+                Kunjungan::firstOrCreate([
+                    'ip_address' => $clientIp,
+                    'tanggal'    => today(),
+                ]);
+                Cache::put($visitCacheKey, true, 86400);
+            } catch (\Throwable $e) {
+                // Ignore DB uniqueness race condition
+            }
         }
 
-        $settings = WebsiteSetting::first() ?? new WebsiteSetting;
-        $beritaTerbaru = BeritaDanGaleri::where('jenis', 'berita')->latest()->take(6)->get();
-        $dokumenInformasi = InformasiPublik::latest()->take(6)->get();
-        $infoModel = Informasi::first();
+        $settings = Cache::remember('shared_website_settings', 3600, fn () => WebsiteSetting::first() ?? new WebsiteSetting);
+        $beritaTerbaru = Cache::remember('website_home_berita', 300, fn () => BeritaDanGaleri::where('jenis', 'berita')->latest()->take(6)->get());
+        $dokumenInformasi = Cache::remember('website_home_info', 300, fn () => InformasiPublik::latest()->take(6)->get());
+        $infoModel = Cache::remember('website_home_info_model', 1800, fn () => Informasi::first());
+
+        $stats = Cache::remember('website_home_stats', 300, function () {
+            return [
+                'total_informasi' => InformasiPublik::count(),
+                'total_jdih'      => Jdih::count(),
+                'total_berita'    => BeritaDanGaleri::where('jenis', 'berita')->count(),
+                'total_unduhan'   => (int) (InformasiPublik::sum('jumlah_diunduh') + Jdih::sum('jumlah_diunduh')),
+                'total_kunjungan' => Kunjungan::count(),
+            ];
+        });
 
         return Inertia::render('Website::Home', [
             'settings'        => $settings,
@@ -47,11 +63,11 @@ class WebsiteController extends Controller
             'informasi'       => $dokumenInformasi,
             'partners'        => $infoModel?->kerjasama ?? [],
             'faqs'            => $infoModel?->faq ?? [],
-            'total_informasi' => InformasiPublik::count(),
-            'total_jdih'      => Jdih::count(),
-            'total_berita'    => BeritaDanGaleri::where('jenis', 'berita')->count(),
-            'total_unduhan'   => (int) (InformasiPublik::sum('jumlah_diunduh') + Jdih::sum('jumlah_diunduh')),
-            'total_kunjungan' => Kunjungan::count(),
+            'total_informasi' => $stats['total_informasi'],
+            'total_jdih'      => $stats['total_jdih'],
+            'total_berita'    => $stats['total_berita'],
+            'total_unduhan'   => $stats['total_unduhan'],
+            'total_kunjungan' => $stats['total_kunjungan'],
         ]);
     }
 

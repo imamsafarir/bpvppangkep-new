@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @php
-        $siteSettings = \Modules\Website\Models\WebsiteSetting::first();
+        $siteSettings = \Illuminate\Support\Facades\Cache::remember('shared_website_settings', 3600, fn() => \Modules\Website\Models\WebsiteSetting::first());
         $seoService = app(\Modules\Website\Services\SeoService::class);
         $seo = $seoService->resolveMetadata($page ?? []);
 
@@ -87,13 +87,22 @@
     <meta name="msapplication-TileColor" content="#0A2E50">
     <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
 
-    <!-- 8. Fonts & External Resources -->
+    <!-- 8. Fonts & External Resources (Preconnect & Non-blocking) -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Lexend:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+        rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Lexend:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    </noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    </noscript>
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
