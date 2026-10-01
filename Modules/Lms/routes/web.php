@@ -91,9 +91,9 @@ Route::middleware(['auth', 'role:admin_lms,admin,super_admin,admin_lms_instructo
         // TAB 2: Peserta & Import Excel
         Route::post('/{course}/participants', [ParticipantImportController::class, 'store'])->name('participants.store');
         Route::post('/{course}/participants/import', [ParticipantImportController::class, 'import'])->name('participants.import');
-        Route::put('/{course}/enrollments/{enrollment}', [ParticipantImportController::class, 'update'])->name('participants.update');
-        Route::delete('/{course}/enrollments/{enrollment}', [ParticipantImportController::class, 'destroy'])->name('participants.destroy');
-        Route::post('/{course}/enrollments/bulk-delete', [ParticipantImportController::class, 'bulkDestroy'])->name('participants.bulk-destroy');
+        Route::put('/{course}/enrollments/{enrollment}', [ParticipantImportController::class, 'update'])->name('enrollments.update');
+        Route::delete('/{course}/enrollments/{enrollment}', [ParticipantImportController::class, 'destroy'])->name('enrollments.destroy');
+        Route::post('/{course}/enrollments/bulk-delete', [ParticipantImportController::class, 'bulkDestroy'])->name('enrollments.bulk-destroy');
         Route::get('/{course}/participants/export', [ParticipantImportController::class, 'export'])->name('participants.export');
 
         // TAB 3: Online Meeting & Monitoring Kehadiran (Kelas & Unit)
