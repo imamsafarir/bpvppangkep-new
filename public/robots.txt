@@ -1,2 +1,13 @@
+# Robots.txt for BPVP Pangkep (Kemnaker RI)
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /admin/
+Disallow: /login
+Disallow: /dashboard
+Disallow: /lms/admin/
+Disallow: /lms/student/
+Disallow: /user/
+
+# Sitemap
+Sitemap: /sitemap.xml
+

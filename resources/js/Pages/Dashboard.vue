@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { ref, computed } from "vue";
 import { Head, Link, usePage } from "@inertiajs/vue3";
 import DashboardLayout from "@/Layouts/DashboardLayout.vue";
 import {
@@ -28,6 +28,9 @@ import {
     ExternalLink,
     CheckCircle2,
     Lock,
+    GraduationCap,
+    Copy,
+    Check,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -40,6 +43,8 @@ const props = defineProps({
             total_shortlinks: 0,
             total_clicks: 0,
             total_users: 0,
+            total_courses: 0,
+            total_participants: 0,
         }),
     },
 });
@@ -76,8 +81,66 @@ const hasRole = (allowedRoles) => {
             return true;
         if (r === "shortlink" && userRoles.value.includes("admin_shortlink"))
             return true;
+        if (r === "admin_lms" && userRoles.value.includes("lms")) return true;
+        if (r === "lms" && userRoles.value.includes("admin_lms")) return true;
+        if (
+            (r === "admin_lms_instructor" || r === "instructor") &&
+            (userRoles.value.includes("admin_lms") ||
+                userRoles.value.includes("instructor") ||
+                userRoles.value.includes("medsos_instruktur"))
+        ) {
+            return true;
+        }
         return false;
     });
+};
+
+// --- LOGIKA SALIN TAUTAN (COPY TO CLIPBOARD) ---
+const copiedHref = ref("");
+let copyTimer = null;
+
+const copyToClipboard = (href) => {
+    if (typeof window === "undefined") return;
+    const fullUrl =
+        href.startsWith("http://") || href.startsWith("https://")
+            ? href
+            : `${window.location.origin}${href}`;
+
+    const setCopied = () => {
+        copiedHref.value = href;
+        if (copyTimer) clearTimeout(copyTimer);
+        copyTimer = setTimeout(() => {
+            copiedHref.value = "";
+        }, 2200);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+            .writeText(fullUrl)
+            .then(setCopied)
+            .catch(() => {
+                fallbackCopy(fullUrl, setCopied);
+            });
+    } else {
+        fallbackCopy(fullUrl, setCopied);
+    }
+};
+
+const fallbackCopy = (text, callback) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        document.execCommand("copy");
+        callback();
+    } catch (err) {
+        console.error("Gagal menyalin tautan", err);
+    }
+    document.body.removeChild(textArea);
 };
 
 // Modul-modul dengan identitas warna hidup (color themes)
@@ -93,6 +156,24 @@ const quickAccessApps = [
         iconBg: "bg-blue-50 text-blue-600 border-blue-100",
         badgeVariant: "info",
         badgeText: "Website Balai",
+    },
+    {
+        title: "Modul LMS (E-Learning)",
+        desc: "Kelola kurikulum pelatihan vokasi, data peserta kelas, modul digital, kuis, dan penerbitan sertifikat resmi.",
+        icon: GraduationCap,
+        href: "/admin/lms",
+        badge: "Modul LMS",
+        roles: [
+            "super_admin",
+            "admin",
+            "admin_lms",
+            "admin_lms_instructor",
+            "instructor",
+        ],
+        accentColor: "border-t-indigo-500",
+        iconBg: "bg-indigo-50 text-indigo-600 border-indigo-100",
+        badgeVariant: "indigo",
+        badgeText: "Pelatihan & Siswa",
     },
     {
         title: "Modul Sosmed Hub",
@@ -207,24 +288,125 @@ const quickAccessApps = [
                         </div>
                     </div>
 
-                    <!-- Quick Action Button in Banner -->
-                    <div class="shrink-0 flex sm:flex-col gap-2">
-                        <a
-                            href="/"
-                            target="_blank"
-                            class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all hover:scale-105 cursor-pointer"
+                    <!-- Quick Action Shortcuts in Banner (Buka & Salin) -->
+                    <div class="shrink-0 flex flex-wrap sm:flex-col gap-2.5">
+                        <!-- Shortcut 1: Website Balai -->
+                        <div
+                            class="inline-flex items-center rounded-xl bg-white/10 backdrop-blur-md border border-white/20 p-1 shadow-md"
                         >
-                            <Globe class="w-4 h-4" />
-                            <span>Buka Website</span>
-                            <ExternalLink class="w-3.5 h-3.5 opacity-80" />
-                        </a>
+                            <a
+                                href="/"
+                                target="_blank"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:bg-white/20 text-xs font-bold transition-all cursor-pointer"
+                                title="Buka Website Balai di tab baru"
+                            >
+                                <Globe class="w-4 h-4 text-blue-300" />
+                                <span>Buka Website</span>
+                                <ExternalLink class="w-3 h-3 opacity-70" />
+                            </a>
+                            <button
+                                type="button"
+                                @click="copyToClipboard('/')"
+                                class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/20 transition-all cursor-pointer relative"
+                                :title="
+                                    copiedHref === '/'
+                                        ? 'Tautan Berhasil Disalin!'
+                                        : 'Salin Tautan Website'
+                                "
+                            >
+                                <Check
+                                    v-if="copiedHref === '/'"
+                                    class="w-3.5 h-3.5 text-emerald-400"
+                                />
+                                <Copy v-else class="w-3.5 h-3.5" />
+                                <span
+                                    v-if="copiedHref === '/'"
+                                    class="absolute -top-7 right-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white shadow-xs whitespace-nowrap pointer-events-none"
+                                >
+                                    Tersalin!
+                                </span>
+                            </button>
+                        </div>
+
+                        <!-- Shortcut 2: Portal LMS Siswa -->
+                        <div
+                            class="inline-flex items-center rounded-xl bg-indigo-600/30 backdrop-blur-md border border-indigo-400/30 p-1 shadow-md"
+                        >
+                            <a
+                                href="/lms"
+                                target="_blank"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-white hover:bg-indigo-600/40 text-xs font-bold transition-all cursor-pointer"
+                                title="Buka Portal LMS Siswa di tab baru"
+                            >
+                                <GraduationCap
+                                    class="w-4 h-4 text-indigo-300"
+                                />
+                                <span>Portal LMS Siswa</span>
+                                <ExternalLink class="w-3 h-3 opacity-70" />
+                            </a>
+                            <button
+                                type="button"
+                                @click="copyToClipboard('/lms')"
+                                class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-white/20 transition-all cursor-pointer relative"
+                                :title="
+                                    copiedHref === '/lms'
+                                        ? 'Tautan Berhasil Disalin!'
+                                        : 'Salin Tautan Portal Siswa'
+                                "
+                            >
+                                <Check
+                                    v-if="copiedHref === '/lms'"
+                                    class="w-3.5 h-3.5 text-emerald-400"
+                                />
+                                <Copy v-else class="w-3.5 h-3.5" />
+                                <span
+                                    v-if="copiedHref === '/lms'"
+                                    class="absolute -top-7 right-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white shadow-xs whitespace-nowrap pointer-events-none"
+                                >
+                                    Tersalin!
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 2. QUICK METRIC STAT CARDS -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <!-- Stat 1: Berita -->
+            <!-- 2. QUICK METRIC STAT CARDS (5 METRICS) -->
+            <div
+                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4"
+            >
+                <!-- Stat 1: Modul LMS -->
+                <div
+                    class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
+                >
+                    <div class="space-y-1">
+                        <span
+                            class="text-xs font-bold text-slate-500 uppercase tracking-wider block"
+                        >
+                            Pelatihan & LMS
+                        </span>
+                        <div
+                            class="text-2xl font-black text-slate-900 tracking-tight"
+                        >
+                            {{ stats.total_courses || 0 }}
+                            <span class="text-xs font-semibold text-slate-400"
+                                >Kelas</span
+                            >
+                        </div>
+                        <span
+                            class="text-[11px] text-indigo-600 font-semibold block"
+                        >
+                            + {{ stats.total_participants || 0 }} Peserta Siswa
+                        </span>
+                    </div>
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0"
+                    >
+                        <GraduationCap class="w-6 h-6" />
+                    </div>
+                </div>
+
+                <!-- Stat 2: Berita -->
                 <div
                     class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
                 >
@@ -255,7 +437,7 @@ const quickAccessApps = [
                     </div>
                 </div>
 
-                <!-- Stat 2: Dokumen -->
+                <!-- Stat 3: Dokumen -->
                 <div
                     class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
                 >
@@ -286,7 +468,7 @@ const quickAccessApps = [
                     </div>
                 </div>
 
-                <!-- Stat 3: Shortlinks -->
+                <!-- Stat 4: Shortlinks -->
                 <div
                     class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
                 >
@@ -317,7 +499,7 @@ const quickAccessApps = [
                     </div>
                 </div>
 
-                <!-- Stat 4: Users -->
+                <!-- Stat 5: Users -->
                 <div
                     class="rounded-2xl bg-white p-5 border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between"
                 >
@@ -371,7 +553,7 @@ const quickAccessApps = [
                 </div>
 
                 <div
-                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5"
+                    class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5"
                 >
                     <template v-for="(app, idx) in quickAccessApps" :key="idx">
                         <!-- KARTU AKTIF / DAPAT DIAKSES -->

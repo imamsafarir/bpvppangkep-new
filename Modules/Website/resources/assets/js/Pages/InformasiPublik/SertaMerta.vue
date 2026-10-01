@@ -49,8 +49,11 @@ const filteredItems = computed(() => {
 </script>
 
 <template>
-    <Head title="Informasi Serta Merta" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Informasi Publik Serta Merta"
+        description="Dokumentasi dan pengumuman informasi publik serta merta PPID BPVP Pangkep mengenai keadaan darurat atau kepentingan hajat hidup publik."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

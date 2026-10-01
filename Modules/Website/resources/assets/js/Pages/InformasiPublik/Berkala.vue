@@ -49,8 +49,11 @@ const filteredItems = computed(() => {
 </script>
 
 <template>
-    <Head title="Informasi Berkala" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Informasi Publik Berkala"
+        description="Daftar arsip dan dokumen informasi publik berkala PPID BPVP Pangkep sesuai ketentuan Undang-Undang Keterbukaan Informasi Publik."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

@@ -21,8 +21,11 @@ const closeModal = () => {
 </script>
 
 <template>
-    <Head title="Kejuruan Pelatihan" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Program Kejuruan & Pelatihan Vokasi"
+        description="Daftar program kejuruan pelatihan vokasi berbasis kompetensi di BPVP Pangkep: Otomotif, Teknik Las, Kelistrikan, TIK, Garmen, dan Refrigerasi. Pelatihan gratis bersertifikasi BNSP."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- BREADCRUMB -->

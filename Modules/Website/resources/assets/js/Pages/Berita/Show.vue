@@ -77,10 +77,26 @@ const getTerkaitFoto = (foto) => {
     if (Array.isArray(foto)) return `/storage/${foto[0]}`;
     return `/storage/${foto}`;
 };
+
+const cleanDescription = computed(() => {
+    if (!props.berita?.konten_berita) return "";
+    return props.berita.konten_berita
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 160);
+});
 </script>
 
 <template>
-    <AppLayout :title="berita.judul_berita" :settings="settings">
+    <AppLayout
+        :title="berita.judul_berita"
+        :description="cleanDescription"
+        :image="gambarUtama"
+        type="article"
+        :keywords="berita.tags"
+        :settings="settings"
+    >
         <main class="py-12 min-h-screen bg-slate-50/50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
                 <!-- Breadcrumb -->

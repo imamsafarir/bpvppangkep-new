@@ -1,10 +1,18 @@
 <script setup>
 import { ref, computed, watch } from "vue";
-import { Head, Link, usePage, router } from "@inertiajs/vue3";
+import { Head, Link, usePage, router, useForm } from "@inertiajs/vue3";
 import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
 import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
-import PwaInstallPrompt from "@/Components/PwaInstallPrompt.vue";
+import { Input } from "@/Components/ui/input";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from "@/Components/ui/dialog";
 import {
     LayoutDashboard,
     Globe,
@@ -27,11 +35,108 @@ import {
     FileSpreadsheet,
     Calendar,
     BarChart3,
+    Copy,
+    Check,
+    KeyRound,
+    Eye,
+    EyeOff,
+    Lock,
 } from "lucide-vue-next";
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user || {});
 const settings = computed(() => page.props.settings || {});
+
+// --- LOGIKA SALIN TAUTAN (COPY TO CLIPBOARD) ---
+const copiedHref = ref("");
+let copyTimer = null;
+
+const copyToClipboard = (href) => {
+    if (typeof window === "undefined") return;
+    const fullUrl =
+        href.startsWith("http://") || href.startsWith("https://")
+            ? href
+            : `${window.location.origin}${href}`;
+
+    const setCopied = () => {
+        copiedHref.value = href;
+        if (copyTimer) clearTimeout(copyTimer);
+        copyTimer = setTimeout(() => {
+            copiedHref.value = "";
+        }, 2200);
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+            .writeText(fullUrl)
+            .then(setCopied)
+            .catch(() => {
+                fallbackCopy(fullUrl, setCopied);
+            });
+    } else {
+        fallbackCopy(fullUrl, setCopied);
+    }
+};
+
+const fallbackCopy = (text, callback) => {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = "0";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+        document.execCommand("copy");
+        callback();
+    } catch (err) {
+        console.error("Gagal menyalin tautan", err);
+    }
+    document.body.removeChild(textArea);
+};
+
+// --- LOGIKA UBAH PASSWORD PENGGUNA ---
+const isPasswordDialogOpen = ref(false);
+const showCurrentPassword = ref(false);
+const showNewPassword = ref(false);
+const showConfirmPassword = ref(false);
+const passwordSuccessMessage = ref("");
+
+const passwordForm = useForm({
+    current_password: "",
+    password: "",
+    password_confirmation: "",
+});
+
+const openPasswordDialog = () => {
+    passwordForm.reset();
+    passwordForm.clearErrors();
+    showCurrentPassword.value = false;
+    showNewPassword.value = false;
+    showConfirmPassword.value = false;
+    passwordSuccessMessage.value = "";
+    isPasswordDialogOpen.value = true;
+};
+
+const closePasswordDialog = () => {
+    isPasswordDialogOpen.value = false;
+    passwordForm.reset();
+    passwordForm.clearErrors();
+};
+
+const submitChangePassword = () => {
+    passwordSuccessMessage.value = "";
+    passwordForm.put("/user/password", {
+        preserveScroll: true,
+        onSuccess: () => {
+            passwordSuccessMessage.value = "Password Anda berhasil diperbarui!";
+            passwordForm.reset();
+            setTimeout(() => {
+                closePasswordDialog();
+            }, 1500);
+        },
+    });
+};
 
 const faviconUrl = computed(() => {
     const path = settings.value?.favicon_path;
@@ -72,6 +177,8 @@ const hasRole = (allowedRoles) => {
             return true;
         if (r === "shortlink" && userRoles.value.includes("admin_shortlink"))
             return true;
+        if (r === "admin_lms" && userRoles.value.includes("lms")) return true;
+        if (r === "lms" && userRoles.value.includes("admin_lms")) return true;
         return false;
     });
 };
@@ -105,6 +212,7 @@ const activeSubmenu = ref({
     "Modul Website": false,
     "Modul Shortlink": false,
     "Modul Sosmed Hub": false,
+    "Modul LMS": false,
 });
 
 const isModulWebsiteRoute = computed(() => {
@@ -139,6 +247,12 @@ const isModulSosmedRoute = computed(() => {
     );
 });
 
+const isModulLmsRoute = computed(() => {
+    const url = page.url || "";
+    const cleanPath = url.split("?")[0];
+    return cleanPath.startsWith("/admin/lms");
+});
+
 const isSubmenuOpen = (menuName) => {
     return Boolean(activeSubmenu.value[menuName]);
 };
@@ -147,6 +261,7 @@ const isSubmenuActive = (menuName) => {
     if (menuName === "Modul Website") return isModulWebsiteRoute.value;
     if (menuName === "Modul Shortlink") return isModulShortlinkRoute.value;
     if (menuName === "Modul Sosmed Hub") return isModulSosmedRoute.value;
+    if (menuName === "Modul LMS") return isModulLmsRoute.value;
     return false;
 };
 
@@ -154,6 +269,7 @@ const getActiveModuleFromRoute = () => {
     if (isModulWebsiteRoute.value) return "Modul Website";
     if (isModulShortlinkRoute.value) return "Modul Shortlink";
     if (isModulSosmedRoute.value) return "Modul Sosmed Hub";
+    if (isModulLmsRoute.value) return "Modul LMS";
     return null;
 };
 
@@ -162,6 +278,7 @@ const syncSubmenusWithRoute = () => {
     activeSubmenu.value["Modul Website"] = activeMod === "Modul Website";
     activeSubmenu.value["Modul Shortlink"] = activeMod === "Modul Shortlink";
     activeSubmenu.value["Modul Sosmed Hub"] = activeMod === "Modul Sosmed Hub";
+    activeSubmenu.value["Modul LMS"] = activeMod === "Modul LMS";
 };
 
 const toggleSubmenu = (menuName) => {
@@ -170,6 +287,7 @@ const toggleSubmenu = (menuName) => {
     activeSubmenu.value["Modul Website"] = false;
     activeSubmenu.value["Modul Shortlink"] = false;
     activeSubmenu.value["Modul Sosmed Hub"] = false;
+    activeSubmenu.value["Modul LMS"] = false;
     activeSubmenu.value[menuName] = nextState;
 };
 
@@ -241,6 +359,14 @@ const isChildActive = (href) => {
         return false;
     }
 
+    // If on /admin/lms/participants, do not highlight base /admin/lms
+    if (
+        cleanHrefPath === "/admin/lms" &&
+        cleanCurrentPath.startsWith("/admin/lms/participants")
+    ) {
+        return false;
+    }
+
     if (cleanCurrentPath === cleanHrefPath) {
         return true;
     }
@@ -297,6 +423,14 @@ const navigation = [
                         name: "Konfigurasi Website",
                         href: "/admin/settings",
                         icon: Settings,
+                    },
+                    {
+                        name: "Lihat Website",
+                        href: "/",
+                        icon: Globe,
+                        isShortcut: true,
+                        external: true,
+                        shortcutLabel: "Publik",
                     },
                 ],
             },
@@ -361,11 +495,29 @@ const navigation = [
                 ],
             },
             {
-                name: "Lihat Website",
-                icon: ExternalLink,
-                href: "/",
-                external: true,
-                roles: [],
+                name: "Modul LMS",
+                icon: GraduationCap,
+                roles: ["super_admin", "admin", "admin_lms"],
+                children: [
+                    {
+                        name: "Daftar Pelatihan",
+                        href: "/admin/lms",
+                        roles: ["super_admin", "admin", "admin_lms"],
+                    },
+                    {
+                        name: "Data Seluruh Peserta",
+                        href: "/admin/lms/participants",
+                        roles: ["super_admin"],
+                    },
+                    {
+                        name: "Portal Belajar LMS",
+                        href: "/lms",
+                        icon: GraduationCap,
+                        isShortcut: true,
+                        external: true,
+                        shortcutLabel: "Siswa",
+                    },
+                ],
             },
         ],
     },
@@ -556,39 +708,151 @@ const navigation = [
                                                 : 'space-y-1 py-1',
                                         ]"
                                     >
-                                        <Link
+                                        <template
                                             v-for="(
                                                 child, childIdx
                                             ) in item.children"
                                             :key="childIdx"
-                                            :href="child.href"
-                                            :title="child.name"
-                                            :class="[
-                                                'flex items-center rounded-xl text-xs font-semibold transition-all select-none',
-                                                isSidebarOpen
-                                                    ? 'gap-2.5 px-3 py-2'
-                                                    : 'justify-center p-2.5',
-                                                isChildActive(child.href)
-                                                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-500/20'
-                                                    : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/70',
-                                            ]"
                                         >
-                                            <component
-                                                v-if="child.icon"
-                                                :is="child.icon"
+                                            <!-- KHUSUS ITEM SHORTCUT (ADA TOMBOL KLIK & SALIN) -->
+                                            <div
+                                                v-if="
+                                                    child.isShortcut &&
+                                                    (!child.roles ||
+                                                        hasRole(child.roles))
+                                                "
                                                 :class="[
-                                                    'w-4 h-4 shrink-0 transition-colors',
-                                                    isChildActive(child.href)
-                                                        ? 'text-white'
-                                                        : 'text-slate-400',
+                                                    'group/shortcut flex items-center rounded-xl text-xs transition-all select-none border border-slate-200/90 bg-slate-50/80 hover:bg-blue-50/60 hover:border-blue-300',
+                                                    isSidebarOpen
+                                                        ? 'justify-between px-2.5 py-1.5 gap-1.5'
+                                                        : 'justify-center p-2',
                                                 ]"
-                                            />
-                                            <span
-                                                v-show="isSidebarOpen"
-                                                class="truncate"
-                                                >{{ child.name }}</span
                                             >
-                                        </Link>
+                                                <a
+                                                    :href="child.href"
+                                                    target="_blank"
+                                                    :title="`Buka ${child.name} di tab baru`"
+                                                    class="flex items-center gap-2 min-w-0 flex-1 text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
+                                                >
+                                                    <component
+                                                        v-if="child.icon"
+                                                        :is="child.icon"
+                                                        class="w-3.5 h-3.5 shrink-0 text-blue-600"
+                                                    />
+                                                    <span
+                                                        v-show="isSidebarOpen"
+                                                        class="truncate font-semibold text-[11px]"
+                                                        >{{ child.name }}</span
+                                                    >
+                                                    <span
+                                                        v-if="
+                                                            child.shortcutLabel &&
+                                                            isSidebarOpen
+                                                        "
+                                                        class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-100/90 text-blue-700 uppercase tracking-tight shrink-0 font-mono"
+                                                    >
+                                                        {{
+                                                            child.shortcutLabel
+                                                        }}
+                                                    </span>
+                                                </a>
+
+                                                <!-- Tombol Aksi: Salin & Klik (Buka) -->
+                                                <div
+                                                    v-show="isSidebarOpen"
+                                                    class="flex items-center gap-1 shrink-0"
+                                                >
+                                                    <!-- Tombol Salin Tautan -->
+                                                    <button
+                                                        type="button"
+                                                        @click.stop.prevent="
+                                                            copyToClipboard(
+                                                                child.href,
+                                                            )
+                                                        "
+                                                        class="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-white transition-all cursor-pointer relative"
+                                                        :title="
+                                                            copiedHref ===
+                                                            child.href
+                                                                ? 'Tautan Berhasil Disalin!'
+                                                                : 'Salin Tautan'
+                                                        "
+                                                    >
+                                                        <Check
+                                                            v-if="
+                                                                copiedHref ===
+                                                                child.href
+                                                            "
+                                                            class="w-3.5 h-3.5 text-emerald-600"
+                                                        />
+                                                        <Copy
+                                                            v-else
+                                                            class="w-3.5 h-3.5"
+                                                        />
+
+                                                        <!-- Tooltip Feedback Tersalin -->
+                                                        <span
+                                                            v-if="
+                                                                copiedHref ===
+                                                                child.href
+                                                            "
+                                                            class="absolute -top-7 right-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white shadow-xs whitespace-nowrap z-50 pointer-events-none"
+                                                        >
+                                                            Tersalin!
+                                                        </span>
+                                                    </button>
+
+                                                    <!-- Tombol Klik Buka Halaman -->
+                                                    <a
+                                                        :href="child.href"
+                                                        target="_blank"
+                                                        class="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-white transition-all cursor-pointer"
+                                                        title="Buka di Tab Baru"
+                                                    >
+                                                        <ExternalLink
+                                                            class="w-3.5 h-3.5"
+                                                        />
+                                                    </a>
+                                                </div>
+                                            </div>
+
+                                            <!-- ITEM MENU STANDAR -->
+                                            <Link
+                                                v-else-if="
+                                                    !child.roles ||
+                                                    hasRole(child.roles)
+                                                "
+                                                :href="child.href"
+                                                :title="child.name"
+                                                :class="[
+                                                    'flex items-center rounded-xl text-xs font-semibold transition-all select-none',
+                                                    isSidebarOpen
+                                                        ? 'gap-2.5 px-3 py-2'
+                                                        : 'justify-center p-2.5',
+                                                    isChildActive(child.href)
+                                                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-md shadow-blue-500/20'
+                                                        : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50/70',
+                                                ]"
+                                            >
+                                                <component
+                                                    v-if="child.icon"
+                                                    :is="child.icon"
+                                                    :class="[
+                                                        'w-4 h-4 shrink-0 transition-colors',
+                                                        isChildActive(
+                                                            child.href,
+                                                        )
+                                                            ? 'text-white'
+                                                            : 'text-slate-400',
+                                                    ]"
+                                                />
+                                                <span
+                                                    v-show="isSidebarOpen"
+                                                    class="truncate"
+                                                    >{{ child.name }}</span
+                                                >
+                                            </Link>
+                                        </template>
                                     </div>
                                 </div>
 
@@ -686,14 +950,20 @@ const navigation = [
             >
                 <div
                     v-if="isSidebarOpen"
-                    class="p-2.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2.5"
+                    class="p-2 rounded-2xl bg-white border border-slate-200/90 shadow-2xs flex items-center justify-between gap-2"
                 >
-                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                    <!-- Tombol Trigger Ubah Password (Klik User Profile) -->
+                    <button
+                        type="button"
+                        @click="openPasswordDialog"
+                        class="flex items-center gap-2.5 min-w-0 flex-1 p-1 -m-0.5 rounded-xl hover:bg-slate-100/80 transition-all cursor-pointer group text-left"
+                        title="Klik untuk ubah password akun Anda"
+                    >
                         <Avatar
-                            class="h-9 w-9 ring-2 ring-blue-500/20 shadow-xs shrink-0"
+                            class="h-9 w-9 ring-2 ring-blue-500/20 group-hover:ring-blue-500/50 shadow-xs shrink-0 transition-all"
                         >
                             <AvatarFallback
-                                class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-xs font-black"
+                                class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-xs font-black group-hover:scale-105 transition-transform"
                             >
                                 {{
                                     (user?.name || "U")
@@ -704,10 +974,15 @@ const navigation = [
                         </Avatar>
                         <div class="min-w-0 flex-1">
                             <div
-                                class="font-bold text-xs text-slate-900 truncate"
+                                class="font-bold text-xs text-slate-900 truncate group-hover:text-blue-600 transition-colors flex items-center gap-1"
                                 :title="user?.name"
                             >
-                                {{ user?.name || "Pengguna" }}
+                                <span class="truncate">{{
+                                    user?.name || "Pengguna"
+                                }}</span>
+                                <KeyRound
+                                    class="w-3 h-3 text-slate-400 group-hover:text-blue-600 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                />
                             </div>
                             <div
                                 class="text-[10px] text-slate-500 font-medium truncate flex items-center gap-1.5 mt-0.5"
@@ -716,12 +991,12 @@ const navigation = [
                                     class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"
                                 ></span>
                                 <span
-                                    class="capitalize font-semibold text-blue-600"
+                                    class="capitalize font-semibold text-blue-600 truncate"
                                     >{{ user?.role || "user" }}</span
                                 >
                             </div>
                         </div>
-                    </div>
+                    </button>
 
                     <!-- Integrated Logout Button -->
                     <Link
@@ -737,20 +1012,27 @@ const navigation = [
 
                 <!-- Collapsed view -->
                 <div v-else class="flex flex-col items-center gap-2 p-1">
-                    <Avatar
-                        class="h-9 w-9 ring-2 ring-blue-500/20 shadow-xs"
-                        :title="user?.name || 'Pengguna'"
+                    <button
+                        type="button"
+                        @click="openPasswordDialog"
+                        class="rounded-full ring-2 ring-blue-500/20 hover:ring-blue-500/60 p-0.5 transition-all cursor-pointer group"
+                        title="Klik untuk ubah kata sandi"
                     >
-                        <AvatarFallback
-                            class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-xs font-black"
+                        <Avatar
+                            class="h-9 w-9 shadow-xs"
+                            :title="user?.name || 'Pengguna'"
                         >
-                            {{
-                                (user?.name || "U")
-                                    .substring(0, 1)
-                                    .toUpperCase()
-                            }}
-                        </AvatarFallback>
-                    </Avatar>
+                            <AvatarFallback
+                                class="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-xs font-black group-hover:scale-105 transition-transform"
+                            >
+                                {{
+                                    (user?.name || "U")
+                                        .substring(0, 1)
+                                        .toUpperCase()
+                                }}
+                            </AvatarFallback>
+                        </Avatar>
+                    </button>
                     <Link
                         href="/logout"
                         method="post"
@@ -796,7 +1078,192 @@ const navigation = [
             </main>
         </div>
 
-        <!-- PWA Install Prompt & Update Handler -->
-        <PwaInstallPrompt />
+        <!-- DIALOG UBAH PASSWORD PENGGUNA -->
+        <Dialog :open="isPasswordDialogOpen" @update:open="closePasswordDialog">
+            <DialogContent class="sm:max-w-[430px] p-6">
+                <DialogHeader>
+                    <DialogTitle
+                        class="text-base font-bold text-slate-900 flex items-center gap-2"
+                    >
+                        <div
+                            class="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100"
+                        >
+                            <KeyRound class="w-4 h-4" />
+                        </div>
+                        <span>Ubah Kata Sandi Akun</span>
+                    </DialogTitle>
+                    <DialogDescription class="text-xs text-slate-500 mt-1">
+                        Masukkan password lama Anda, lalu buat password baru dan
+                        ulangi verifikasi 2 kali.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div
+                    v-if="passwordSuccessMessage"
+                    class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2"
+                >
+                    <Check class="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{{ passwordSuccessMessage }}</span>
+                </div>
+
+                <form
+                    @submit.prevent="submitChangePassword"
+                    class="space-y-4 py-2"
+                >
+                    <!-- Kolom 1: Password Lama -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-700 block"
+                            >Password Lama
+                            <span class="text-rose-500">*</span></label
+                        >
+                        <div class="relative">
+                            <Input
+                                :type="
+                                    showCurrentPassword ? 'text' : 'password'
+                                "
+                                v-model="passwordForm.current_password"
+                                placeholder="Masukkan password saat ini"
+                                class="pr-10 text-xs"
+                                :class="
+                                    passwordForm.errors.current_password
+                                        ? 'border-rose-400 focus-visible:ring-rose-400'
+                                        : ''
+                                "
+                                required
+                            />
+                            <button
+                                type="button"
+                                @click="
+                                    showCurrentPassword = !showCurrentPassword
+                                "
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                tabindex="-1"
+                            >
+                                <EyeOff
+                                    v-if="showCurrentPassword"
+                                    class="w-4 h-4"
+                                />
+                                <Eye v-else class="w-4 h-4" />
+                            </button>
+                        </div>
+                        <p
+                            v-if="passwordForm.errors.current_password"
+                            class="text-[11px] text-rose-500 font-medium"
+                        >
+                            {{ passwordForm.errors.current_password }}
+                        </p>
+                    </div>
+
+                    <!-- Kolom 2: Password Baru -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-700 block"
+                            >Password Baru
+                            <span class="text-rose-500">*</span></label
+                        >
+                        <div class="relative">
+                            <Input
+                                :type="showNewPassword ? 'text' : 'password'"
+                                v-model="passwordForm.password"
+                                placeholder="Minimal 8 karakter"
+                                class="pr-10 text-xs"
+                                :class="
+                                    passwordForm.errors.password
+                                        ? 'border-rose-400 focus-visible:ring-rose-400'
+                                        : ''
+                                "
+                                required
+                            />
+                            <button
+                                type="button"
+                                @click="showNewPassword = !showNewPassword"
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                tabindex="-1"
+                            >
+                                <EyeOff
+                                    v-if="showNewPassword"
+                                    class="w-4 h-4"
+                                />
+                                <Eye v-else class="w-4 h-4" />
+                            </button>
+                        </div>
+                        <p
+                            v-if="passwordForm.errors.password"
+                            class="text-[11px] text-rose-500 font-medium"
+                        >
+                            {{ passwordForm.errors.password }}
+                        </p>
+                    </div>
+
+                    <!-- Kolom 3: Konfirmasi Password Baru (Verifikasi 2x) -->
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-700 block"
+                            >Konfirmasi Password Baru
+                            <span class="text-rose-500">*</span></label
+                        >
+                        <div class="relative">
+                            <Input
+                                :type="
+                                    showConfirmPassword ? 'text' : 'password'
+                                "
+                                v-model="passwordForm.password_confirmation"
+                                placeholder="Ketik ulang password baru Anda"
+                                class="pr-10 text-xs"
+                                :class="
+                                    passwordForm.errors.password_confirmation
+                                        ? 'border-rose-400 focus-visible:ring-rose-400'
+                                        : ''
+                                "
+                                required
+                            />
+                            <button
+                                type="button"
+                                @click="
+                                    showConfirmPassword = !showConfirmPassword
+                                "
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                                tabindex="-1"
+                            >
+                                <EyeOff
+                                    v-if="showConfirmPassword"
+                                    class="w-4 h-4"
+                                />
+                                <Eye v-else class="w-4 h-4" />
+                            </button>
+                        </div>
+                        <p
+                            v-if="passwordForm.errors.password_confirmation"
+                            class="text-[11px] text-rose-500 font-medium"
+                        >
+                            {{ passwordForm.errors.password_confirmation }}
+                        </p>
+                    </div>
+
+                    <DialogFooter
+                        class="pt-3 border-t border-slate-100 flex items-center justify-end gap-2"
+                    >
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            @click="closePasswordDialog"
+                            :disabled="passwordForm.processing"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            type="submit"
+                            size="sm"
+                            class="bg-blue-600 hover:bg-blue-700 text-white"
+                            :disabled="passwordForm.processing"
+                        >
+                            <span v-if="passwordForm.processing"
+                                >Menyimpan...</span
+                            >
+                            <span v-else>Perbarui Password</span>
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

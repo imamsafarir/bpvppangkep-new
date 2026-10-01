@@ -45,7 +45,12 @@ class BeritaController extends Controller
             $beritaQuery->latest();
         }
 
-        $berita = $beritaQuery->paginate(10, ['*'], 'page_berita')->withQueryString();
+        $perPageBerita = (int) $request->query('per_page_berita', 10);
+        if (! in_array($perPageBerita, [10, 25, 50, 100], true)) {
+            $perPageBerita = 10;
+        }
+
+        $berita = $beritaQuery->paginate($perPageBerita, ['*'], 'page_berita')->withQueryString();
 
         $searchGaleri = $request->query('search_galeri');
         $sortGaleri = $request->query('sort_galeri', 'latest');
@@ -66,7 +71,12 @@ class BeritaController extends Controller
             $galeriQuery->latest();
         }
 
-        $galeri = $galeriQuery->paginate(12, ['*'], 'page_galeri')->withQueryString();
+        $perPageGaleri = (int) $request->query('per_page_galeri', 12);
+        if (! in_array($perPageGaleri, [12, 24, 48, 96], true)) {
+            $perPageGaleri = 12;
+        }
+
+        $galeri = $galeriQuery->paginate($perPageGaleri, ['*'], 'page_galeri')->withQueryString();
 
         return Inertia::render('Website::Admin/Berita/Index', [
             'berita' => $berita,
@@ -76,10 +86,12 @@ class BeritaController extends Controller
                 'sort_berita' => $sortBerita,
                 'sort_by_berita' => $sortByBerita ?? '',
                 'sort_dir_berita' => $sortDirBerita,
+                'per_page_berita' => $perPageBerita,
                 'search_galeri' => $searchGaleri ?? '',
                 'sort_galeri' => $sortGaleri,
                 'sort_by_galeri' => $sortByGaleri ?? '',
                 'sort_dir_galeri' => $sortDirGaleri,
+                'per_page_galeri' => $perPageGaleri,
             ],
         ]);
     }
@@ -163,6 +175,25 @@ class BeritaController extends Controller
         $beritaDanGaleri->delete();
 
         return back()->with('success', 'Data berhasil dihapus.');
+    }
+
+    /**
+     * Hapus massal beberapa data berita/galeri sekaligus.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'integer|exists:website_berita_dan_galeri,id',
+        ]);
+
+        $items = BeritaDanGaleri::whereIn('id', $validated['ids'])->get();
+        foreach ($items as $item) {
+            $this->deletePhotos($item->file_foto);
+            $item->delete();
+        }
+
+        return back()->with('success', count($validated['ids']) . ' data berhasil dihapus.');
     }
 
     /**

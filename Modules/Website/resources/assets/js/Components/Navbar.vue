@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { Link } from "@inertiajs/vue3";
 import { triggerInstallPrompt } from "@/pwa";
 
@@ -12,6 +12,12 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+});
+
+const logoVersion = computed(() => {
+    return props.settings?.updated_at
+        ? new Date(props.settings.updated_at).getTime()
+        : "";
 });
 
 const isScrolled = ref(false);
@@ -175,7 +181,7 @@ onUnmounted(() => {
                     <img
                         :src="
                             settings?.logo_path
-                                ? `/storage/${settings.logo_path}`
+                                ? `/storage/${settings.logo_path}${logoVersion ? '?v=' + logoVersion : ''}`
                                 : 'https://kemnaker.go.id/assets/images/logo.png'
                         "
                         :alt="settings?.website_name ?? 'BPVP Pangkep'"

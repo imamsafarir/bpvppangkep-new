@@ -52,8 +52,11 @@ const filteredItems = computed(() => {
 </script>
 
 <template>
-    <Head title="JDIH" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="JDIH - Jaringan Dokumentasi & Informasi Hukum"
+        description="Portal JDIH BPVP Pangkep Kemnaker RI. Akses dan unduh dokumen peraturan ketenagakerjaan, keputusan menteri, dan regulasi pelatihan vokasi."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen bg-slate-50/50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Navigation Breadcrumbs -->

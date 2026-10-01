@@ -1,8 +1,7 @@
-const CACHE_NAME = "bpvp-superapp-v1.0.0";
+const CACHE_NAME = "bpvp-superapp-v2.0.0";
 const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_ASSETS = [
-    "/",
     OFFLINE_URL,
     "/manifest.json",
     "/favicon.ico",
@@ -18,7 +17,7 @@ const PRECACHE_ASSETS = [
     "/icons/maskable-icon-512x512.png",
 ];
 
-// Install: Pre-cache offline shell
+// Install: Pre-cache offline shell only
 self.addEventListener("install", (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -30,7 +29,7 @@ self.addEventListener("install", (event) => {
     self.skipWaiting();
 });
 
-// Activate: Clean up old caches
+// Activate: Clean up all old caches immediately
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         caches
@@ -48,22 +47,67 @@ self.addEventListener("activate", (event) => {
     );
 });
 
-// Fetch logic
+// Fetch logic: Never serve stale cache for dynamic data, uploads, or admin pages
 self.addEventListener("fetch", (event) => {
     const request = event.request;
     const url = new URL(request.url);
 
-    // Skip non-GET, Chrome extension schemes, and cross-origin requests
+    // 1. Only handle GET and same-origin HTTP/HTTPS requests
     if (request.method !== "GET" || !url.protocol.startsWith("http")) {
         return;
     }
 
-    // 1. Navigation requests (HTML pages) -> Network first, fallback to cache, then offline.html
+    // 2. NEVER intercept or cache dynamic data, admin pages, APIs, or user media uploads (/storage)
+    const isDynamicOrBypassed =
+        url.pathname.startsWith("/admin") ||
+        url.pathname.startsWith("/dashboard") ||
+        url.pathname.startsWith("/lms/admin") ||
+        url.pathname.startsWith("/lms/student") ||
+        url.pathname.startsWith("/login") ||
+        url.pathname.startsWith("/logout") ||
+        url.pathname.startsWith("/api") ||
+        url.pathname.startsWith("/storage") || // User media must ALWAYS be fresh from server!
+        url.pathname.startsWith("/s/") || // Shortlink redirects
+        url.searchParams.has("token") ||
+        request.headers.get("X-Inertia") === "true" ||
+        request.headers.get("X-Requested-With") === "XMLHttpRequest";
+
+    if (isDynamicOrBypassed) {
+        // Let browser handle request directly from network without SW interference
+        return;
+    }
+
+    // 3. Navigation requests (HTML pages for public visitors) -> Network strictly, fallback to offline.html
     if (request.mode === "navigate") {
         event.respondWith(
-            fetch(request)
-                .then((networkResponse) => {
-                    // Cache successful page navigations
+            fetch(request).catch(async () => {
+                const offlineFallback = await caches.match(OFFLINE_URL);
+                return (
+                    offlineFallback ||
+                    new Response("Offline", {
+                        status: 503,
+                        statusText: "Offline",
+                    })
+                );
+            }),
+        );
+        return;
+    }
+
+    // 4. Truly immutable build assets (/build/) and static PWA icons (/icons/) -> Cache first
+    const isImmutableAsset =
+        url.pathname.startsWith("/build/") ||
+        url.pathname.startsWith("/icons/") ||
+        url.pathname === "/favicon.ico" ||
+        url.pathname === "/manifest.json";
+
+    if (isImmutableAsset) {
+        event.respondWith(
+            caches.match(request).then((cachedResponse) => {
+                if (cachedResponse) {
+                    return cachedResponse;
+                }
+                return fetch(request).then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
                         const responseClone = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => {
@@ -71,66 +115,26 @@ self.addEventListener("fetch", (event) => {
                         });
                     }
                     return networkResponse;
-                })
-                .catch(async () => {
-                    const cachedResponse = await caches.match(request);
-                    if (cachedResponse) {
-                        return cachedResponse;
-                    }
-                    const offlineFallback = await caches.match(OFFLINE_URL);
-                    return (
-                        offlineFallback ||
-                        new Response("Offline", {
-                            status: 503,
-                            statusText: "Offline",
-                        })
-                    );
-                }),
-        );
-        return;
-    }
-
-    // 2. Static assets (CSS, JS, Fonts, Images) -> Stale-while-revalidate
-    const isStaticAsset =
-        url.pathname.startsWith("/build/") ||
-        url.pathname.startsWith("/icons/") ||
-        url.pathname.startsWith("/storage/") ||
-        url.pathname.endsWith(".css") ||
-        url.pathname.endsWith(".js") ||
-        url.pathname.endsWith(".woff2") ||
-        url.pathname.endsWith(".png") ||
-        url.pathname.endsWith(".avif") ||
-        url.pathname.endsWith(".webp") ||
-        url.pathname.endsWith(".svg");
-
-    if (isStaticAsset) {
-        event.respondWith(
-            caches.match(request).then((cachedResponse) => {
-                const fetchPromise = fetch(request)
-                    .then((networkResponse) => {
-                        if (networkResponse && networkResponse.status === 200) {
-                            const responseClone = networkResponse.clone();
-                            caches.open(CACHE_NAME).then((cache) => {
-                                cache.put(request, responseClone);
-                            });
-                        }
-                        return networkResponse;
-                    })
-                    .catch(() => cachedResponse);
-
-                return cachedResponse || fetchPromise;
+                });
             }),
         );
         return;
     }
 
-    // 3. Other requests -> Network with cache fallback
-    event.respondWith(fetch(request).catch(() => caches.match(request)));
+    // 5. All other requests -> Direct fetch without caching
+    event.respondWith(fetch(request));
 });
 
-// Support instant update via postMessage
+// Support instant update and cache clearing via postMessage
 self.addEventListener("message", (event) => {
     if (event.data && event.data.type === "SKIP_WAITING") {
         self.skipWaiting();
+    }
+    if (event.data && event.data.type === "CLEAR_ALL_CACHES") {
+        caches.keys().then((names) => {
+            for (const name of names) {
+                caches.delete(name);
+            }
+        });
     }
 });

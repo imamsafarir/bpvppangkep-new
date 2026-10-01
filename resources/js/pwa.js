@@ -13,6 +13,40 @@ export const pwaState = reactive({
 export function initPwa() {
     if (typeof window === "undefined") return;
 
+    const hostname = window.location.hostname;
+    const isDev =
+        import.meta.env.DEV ||
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname.endsWith(".test") ||
+        hostname.endsWith(".local");
+
+    const pathname = window.location.pathname;
+    const isAdminPath =
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/lms/admin");
+
+    // In local development or inside admin panels, completely disable service worker
+    // and clean up any leftover caches so development/admin edits are 100% real-time.
+    if (isDev || isAdminPath) {
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (const registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+        if ("caches" in window) {
+            caches.keys().then((names) => {
+                for (const name of names) {
+                    caches.delete(name);
+                }
+            });
+        }
+        return;
+    }
+
     // Detect standalone mode (already installed & running as PWA)
     const isStandalone =
         window.matchMedia("(display-mode: standalone)").matches ||
@@ -27,7 +61,7 @@ export function initPwa() {
     const isIos = /iphone|ipad|ipod/.test(userAgent);
     pwaState.isIos = isIos;
 
-    // Listen for beforeinstallprompt event (Chromium, Edge, Android Chrome, Samsung Internet)
+    // Listen for beforeinstallprompt event (Chromium, Edge, Android Chrome)
     window.addEventListener("beforeinstallprompt", (e) => {
         // Prevent default browser mini-infobar
         e.preventDefault();
@@ -43,7 +77,7 @@ export function initPwa() {
         console.log("[PWA] BPVP Pangkep - Super APP berhasil terpasang!");
     });
 
-    // Register Service Worker
+    // Register Service Worker in production for public visitors
     if ("serviceWorker" in navigator) {
         window.addEventListener("load", async () => {
             try {
@@ -52,7 +86,7 @@ export function initPwa() {
                 });
                 pwaState.registration = reg;
 
-                // Check for updates
+                // Seamless background update without nagging users
                 reg.addEventListener("updatefound", () => {
                     const newWorker = reg.installing;
                     if (newWorker) {
@@ -61,7 +95,8 @@ export function initPwa() {
                                 newWorker.state === "installed" &&
                                 navigator.serviceWorker.controller
                             ) {
-                                pwaState.hasUpdate = true;
+                                // Auto skip waiting for transparent updates
+                                newWorker.postMessage({ type: "SKIP_WAITING" });
                             }
                         });
                     }
@@ -71,13 +106,9 @@ export function initPwa() {
             }
         });
 
-        // Auto reload on controller change
-        let refreshing = false;
+        // Controller change
         navigator.serviceWorker.addEventListener("controllerchange", () => {
-            if (!refreshing) {
-                refreshing = true;
-                window.location.reload();
-            }
+            // New worker activated seamlessly
         });
     }
 }

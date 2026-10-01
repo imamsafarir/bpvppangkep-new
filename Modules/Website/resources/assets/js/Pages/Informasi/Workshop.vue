@@ -21,8 +21,11 @@ const closeModal = () => {
 </script>
 
 <template>
-    <Head title="Ruang Kelas & Workshop" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Ruang Kelas & Workshop Praktik Industri"
+        description="Ruang kelas teori multimedia dan workshop praktik kejuruan standar industri di Balai Pelatihan Vokasi dan Produktivitas Pangkep."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- BREADCRUMB -->

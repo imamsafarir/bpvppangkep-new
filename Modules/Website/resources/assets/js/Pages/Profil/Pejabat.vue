@@ -36,8 +36,11 @@ const closeModal = () => {
 </script>
 
 <template>
-    <Head title="Profil Pejabat Struktural" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Profil Pejabat Struktural"
+        description="Profil dan jajaran pejabat struktural Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkajene dan Kepulauan Kemnaker RI."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

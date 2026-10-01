@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\PasswordController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -20,6 +21,7 @@ Route::middleware('guest')->group(function () {
 // ── Auth routes (Portal Dashboard & Sistem) ─────────────────
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+    Route::put('/user/password', [PasswordController::class, 'update'])->name('user.password.update');
 
     Route::get('/dashboard', function () {
         return Inertia::render('Dashboard', [
@@ -30,6 +32,8 @@ Route::middleware('auth')->group(function () {
                 'total_shortlinks' => \Modules\Shortlink\Models\Shortlink::count(),
                 'total_clicks' => (int) \Modules\Shortlink\Models\Shortlink::sum('clicks_count'),
                 'total_users' => \App\Models\User::count(),
+                'total_courses' => \Modules\Lms\Models\Course::count(),
+                'total_participants' => \Modules\Lms\Models\Participant::count(),
             ],
         ]);
     })->name('dashboard');

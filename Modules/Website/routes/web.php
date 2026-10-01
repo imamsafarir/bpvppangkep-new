@@ -8,6 +8,7 @@ use Modules\Website\Http\Controllers\Admin\JdihController;
 use Modules\Website\Http\Controllers\Admin\PelayananPublikController;
 use Modules\Website\Http\Controllers\Admin\ProfilController;
 use Modules\Website\Http\Controllers\Admin\WebsiteSettingController;
+use Modules\Website\Http\Controllers\SitemapController;
 use Modules\Website\Http\Controllers\WebsiteController;
 
 /*
@@ -19,6 +20,9 @@ use Modules\Website\Http\Controllers\WebsiteController;
 // ═════════════════════════════════════════════════════════════════════
 // 1. RUTE PUBLIK WEBSITE
 // ═════════════════════════════════════════════════════════════════════
+
+// Sitemap XML
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 
 // Beranda
 Route::get('/', [WebsiteController::class, 'home'])->name('home');
@@ -85,6 +89,7 @@ Route::middleware(['auth', 'role:admin_website'])->prefix('admin')->name('admin.
     // Berita & Galeri
     Route::get('/berita', [BeritaController::class, 'index'])->name('berita.index');
     Route::post('/berita', [BeritaController::class, 'store'])->name('berita.store');
+    Route::post('/berita/bulk-delete', [BeritaController::class, 'bulkDestroy'])->name('berita.bulk-destroy');
     Route::put('/berita/{beritaDanGaleri}', [BeritaController::class, 'update'])->name('berita.update');
     Route::delete('/berita/{beritaDanGaleri}', [BeritaController::class, 'destroy'])->name('berita.destroy');
 

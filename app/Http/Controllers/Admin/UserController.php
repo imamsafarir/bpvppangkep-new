@@ -36,6 +36,18 @@ class UserController extends Controller
             'badge_color' => 'success',
         ],
         [
+            'id'          => 'admin_lms',
+            'label'       => 'Admin LMS',
+            'desc'        => 'Pengelola kelas, materi pembelajaran, absensi Zoom/mandiri, dan sertifikat TTE',
+            'badge_color' => 'indigo',
+        ],
+        [
+            'id'          => 'admin_lms_instructor',
+            'label'       => 'Admin LMS Instruktur',
+            'desc'        => 'Instruktur LMS: buat & kelola kelas sendiri, duplikasi silabus kelas, dan pantau peserta',
+            'badge_color' => 'warning',
+        ],
+        [
             'id'          => 'medsos_instruktur',
             'label'       => 'Medsos Instruktur',
             'desc'        => 'Pengusul materi pelatihan kejuruan dan narasumber konten',

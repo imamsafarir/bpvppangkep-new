@@ -43,7 +43,11 @@ const prevPhoto = (total) => {
 </script>
 
 <template>
-    <AppLayout title="Galeri Kegiatan" :settings="settings">
+    <AppLayout
+        title="Galeri Dokumentasi Kegiatan"
+        description="Dokumentasi foto dan galeri kegiatan pelatihan vokasi, workshop, uji kompetensi, dan kegiatan balai di BPVP Pangkep."
+        :settings="settings"
+    >
         <main class="py-12 min-h-screen bg-slate-50/50">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Breadcrumbs -->

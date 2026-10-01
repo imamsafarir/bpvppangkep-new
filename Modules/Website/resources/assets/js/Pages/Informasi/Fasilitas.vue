@@ -21,8 +21,11 @@ const closeModal = () => {
 </script>
 
 <template>
-    <Head title="Fasilitas & Kios" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Gedung & Fasilitas Balai"
+        description="Fasilitas penunjang pelatihan modern, gedung asrama, kiosk 3in1, dan sarana prasarana terbaik di BPVP Pangkep Kemnaker RI."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- BREADCRUMB -->

@@ -9,8 +9,11 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Tugas Pokok & Fungsi" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Tugas Pokok & Fungsi Organisasi"
+        description="Tugas pokok dan fungsi Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkajene dan Kepulauan sesuai Permenaker RI."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

@@ -23,8 +23,11 @@ const isPdf = (path) => {
 </script>
 
 <template>
-    <Head title="Struktur Organisasi" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Bagan Struktur Organisasi"
+        description="Bagan dan struktur organisasi Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkajene dan Kepulauan Kemnaker RI."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

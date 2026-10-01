@@ -1,5 +1,6 @@
 {
     "Website": true,
     "Shortlink": true,
-    "Sosmedhub": true
+    "Sosmedhub": true,
+    "Lms": true
 }

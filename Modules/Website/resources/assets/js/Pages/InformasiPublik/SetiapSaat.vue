@@ -49,8 +49,11 @@ const filteredItems = computed(() => {
 </script>
 
 <template>
-    <Head title="Informasi Setiap Saat" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Informasi Publik Setiap Saat"
+        description="Daftar dokumen dan informasi publik yang wajib tersedia setiap saat di PPID Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkep."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

@@ -36,7 +36,10 @@ const getSlideUrl = (slide) => {
     if (rawPath.startsWith("http://") || rawPath.startsWith("https://"))
         return rawPath;
     const clean = rawPath.replace(/^\/?storage\//, "").replace(/^\//, "");
-    return `/storage/${clean}`;
+    const v = props.settings?.updated_at
+        ? `?v=${new Date(props.settings.updated_at).getTime()}`
+        : "";
+    return `/storage/${clean}${v}`;
 };
 
 const currentSlider = ref(0);
@@ -152,25 +155,27 @@ onUnmounted(() => {
             <div
                 class="text-center max-w-7xl space-y-3 sm:space-y-5 z-10 px-4 w-full mx-auto overflow-hidden"
             >
-                <h1
-                    class="text-xs sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)] uppercase"
-                >
-                    Selamat Datang di Situs Resmi
+                <h1 class="space-y-2 sm:space-y-3">
+                    <span
+                        class="block text-xs sm:text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.7)] uppercase"
+                    >
+                        Selamat Datang di Situs Resmi
+                    </span>
+                    <span
+                        class="block font-black bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 bg-clip-text text-transparent drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)] leading-tight tracking-tight uppercase flex flex-col items-center gap-1 sm:gap-2 w-full"
+                    >
+                        <span
+                            class="block text-sm sm:text-xl md:text-2xl lg:text-4xl xl:text-5xl max-w-full tracking-tighter sm:tracking-tight break-words text-center"
+                        >
+                            Balai Pelatihan Vokasi dan Produktivitas
+                        </span>
+                        <span
+                            class="block text-base sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-amber-400 font-black tracking-normal"
+                        >
+                            Pangkajene dan Kepulauan
+                        </span>
+                    </span>
                 </h1>
-                <div
-                    class="font-black bg-gradient-to-r from-amber-300 via-yellow-100 to-amber-400 bg-clip-text text-transparent drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)] leading-tight tracking-tight uppercase flex flex-col items-center gap-1 sm:gap-2 w-full"
-                >
-                    <span
-                        class="block text-sm sm:text-xl md:text-2xl lg:text-4xl xl:text-5xl max-w-full tracking-tighter sm:tracking-tight break-words text-center"
-                    >
-                        Balai Pelatihan Vokasi dan Produktivitas
-                    </span>
-                    <span
-                        class="block text-base sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl text-amber-400 font-black tracking-normal"
-                    >
-                        Pangkajene dan Kepulauan
-                    </span>
-                </div>
                 <div
                     class="text-[11px] sm:text-base md:text-lg font-medium text-slate-200/90 tracking-wide"
                 >

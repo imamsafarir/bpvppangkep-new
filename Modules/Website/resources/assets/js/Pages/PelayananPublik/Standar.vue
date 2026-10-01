@@ -47,8 +47,11 @@ const getFileName = (path) => {
 </script>
 
 <template>
-    <Head title="Standar Pelayanan" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Standar Operasional Pelayanan Publik"
+        description="Standar pelayanan publik, persyaratan pendaftaran pelatihan, waktu layanan, dan jaminan kepuasan di BPVP Pangkep."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

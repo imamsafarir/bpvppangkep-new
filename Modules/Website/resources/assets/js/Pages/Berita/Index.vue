@@ -96,7 +96,11 @@ const filteredItems = computed(() => {
 </script>
 
 <template>
-    <AppLayout title="Berita & Kegiatan" :settings="settings">
+    <AppLayout
+        title="Berita & Pengumuman Terbaru"
+        description="Kumpulan berita, pengumuman seleksi pelatihan vokasi, agenda kegiatan, dan kabar terkini seputar Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkep Kemnaker RI."
+        :settings="settings"
+    >
         <main class="py-12 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Breadcrumbs -->

@@ -59,6 +59,14 @@ const handleInstall = async () => {
 };
 
 const shouldShowBanner = computed(() => {
+    if (typeof window === "undefined") return false;
+    const path = window.location.pathname;
+    if (
+        path.startsWith("/admin") ||
+        path.startsWith("/dashboard") ||
+        path.startsWith("/lms/admin")
+    )
+        return false;
     if (pwaState.isStandalone || pwaState.isInstalled) return false;
     if (isDismissed.value) return false;
     // Show on Android/Chrome/Edge if canInstall is true, or on iOS if not standalone
@@ -68,42 +76,7 @@ const shouldShowBanner = computed(() => {
 
 <template>
     <div>
-        <!-- 1. UPDATE READY TOAST -->
-        <transition
-            enter-active-class="transition duration-300 ease-out"
-            enter-from-class="transform translate-y-4 opacity-0"
-            enter-to-class="transform translate-y-0 opacity-100"
-            leave-active-class="transition duration-200 ease-in"
-            leave-from-class="transform translate-y-0 opacity-100"
-            leave-to-class="transform translate-y-4 opacity-0"
-        >
-            <div
-                v-if="pwaState.hasUpdate"
-                class="fixed top-5 right-5 z-50 max-w-sm bg-gradient-to-r from-blue-900 to-indigo-950 text-white p-4 rounded-2xl shadow-2xl border border-blue-500/30 flex items-center gap-3.5 backdrop-blur-md"
-            >
-                <div
-                    class="p-2.5 bg-blue-500/20 rounded-xl text-blue-300 shrink-0"
-                >
-                    <RefreshCw class="w-5 h-5 animate-spin" />
-                </div>
-                <div class="flex-1 text-xs">
-                    <div class="font-bold text-white text-sm">
-                        Pembaruan Tersedia
-                    </div>
-                    <p class="text-blue-200/90 text-[11px] mt-0.5">
-                        Versi baru BPVP Super APP telah siap digunakan.
-                    </p>
-                </div>
-                <button
-                    @click="updateApp"
-                    class="bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs px-3 py-1.5 rounded-lg shrink-0 cursor-pointer transition shadow-md"
-                >
-                    Muat Ulang
-                </button>
-            </div>
-        </transition>
-
-        <!-- 2. FLOATING INSTALL BANNER -->
+        <!-- FLOATING INSTALL BANNER (Hanya untuk pengunjung publik) -->
         <transition
             enter-active-class="transition duration-400 ease-out"
             enter-from-class="transform translate-y-8 opacity-0 scale-95"

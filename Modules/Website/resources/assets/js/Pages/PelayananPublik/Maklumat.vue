@@ -47,8 +47,11 @@ const getFileName = (path) => {
 </script>
 
 <template>
-    <Head title="Maklumat Pelayanan" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Maklumat Pelayanan Publik"
+        description="Maklumat resmi komitmen pelayanan prima Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkajene dan Kepulauan, Kemnaker RI."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

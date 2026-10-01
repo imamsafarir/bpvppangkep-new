@@ -9,7 +9,11 @@ defineProps({
 </script>
 
 <template>
-    <AppLayout title="PPID" :settings="settings">
+    <AppLayout
+        title="Profil PPID (Pejabat Pengelola Informasi & Dokumentasi)"
+        description="Layanan Pejabat Pengelola Informasi dan Dokumentasi (PPID) BPVP Pangkep. Komitmen keterbukaan informasi publik dan akuntabilitas pemerintah."
+        :settings="settings"
+    >
         <main class="py-12 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

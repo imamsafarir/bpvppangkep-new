@@ -31,6 +31,7 @@ class PelayananPublikController extends Controller
             'maklumat_pelayanan'         => 'nullable',
             'standar_pelayanan'          => 'nullable',
             'foto_alur_pelayanan'        => 'nullable',
+            'remove_foto_alur_pelayanan' => 'nullable|boolean',
             'deskripsi_alur_pelayanan'   => 'nullable|string',
             'survey_kepuasan_masyarakat' => 'nullable|string',
             'survey_kebutuhan_pelatihan' => 'nullable|string',
@@ -41,7 +42,12 @@ class PelayananPublikController extends Controller
         $pelayanan = PelayananPublik::first();
 
         // Bagan Alur Pelayanan (Gambar AVIF atau Dokumen PDF)
-        if ($request->hasFile('foto_alur_pelayanan')) {
+        if ($request->boolean('remove_foto_alur_pelayanan')) {
+            if ($pelayanan?->foto_alur_pelayanan) {
+                $this->mediaService->deleteMedia($pelayanan->foto_alur_pelayanan);
+            }
+            $validated['foto_alur_pelayanan'] = null;
+        } elseif ($request->hasFile('foto_alur_pelayanan')) {
             if ($pelayanan?->foto_alur_pelayanan) {
                 $this->mediaService->deleteMedia($pelayanan->foto_alur_pelayanan);
             }

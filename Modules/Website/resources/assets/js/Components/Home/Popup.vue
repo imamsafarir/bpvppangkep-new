@@ -21,7 +21,10 @@ const getPopupUrl = (path) => {
     if (!path) return "";
     if (path.startsWith("http://") || path.startsWith("https://")) return path;
     const clean = path.replace(/^\/?storage\//, "").replace(/^\//, "");
-    return `/storage/${clean}`;
+    const v = props.settings?.updated_at
+        ? `?v=${new Date(props.settings.updated_at).getTime()}`
+        : "";
+    return `/storage/${clean}${v}`;
 };
 
 onMounted(() => {

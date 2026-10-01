@@ -30,8 +30,11 @@ const nextItem = () => {
 </script>
 
 <template>
-    <Head title="Data Kebekerjaan Alumni" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Data Kebekerjaan & Penelusuran Alumni"
+        description="Statistik penempatan kerja, penelusuran lulusan (tracer study), dan profil alumni sukses Balai Pelatihan Vokasi dan Produktivitas Pangkep."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- BREADCRUMB -->

@@ -30,8 +30,11 @@ const nextItem = () => {
 </script>
 
 <template>
-    <Head title="Testimoni Alumni" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Testimoni Alumni & Mitra Industri"
+        description="Cerita inspiratif dan testimoni alumni pelatihan serta mitra industri Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkep."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- BREADCRUMB -->

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { Head, useForm, router } from "@inertiajs/vue3";
 import DashboardLayout from "@/Layouts/DashboardLayout.vue";
 import { Button } from "@/Components/ui/button";
@@ -35,6 +35,14 @@ import {
     Search,
     ArrowUpDown,
     Filter,
+    RotateCcw,
+    ExternalLink,
+    CheckSquare,
+    Eye,
+    Tag,
+    ZoomIn,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -48,16 +56,18 @@ const isDialogOpen = ref(false);
 const editItem = ref(null);
 const previewImage = ref(null);
 
-// Search & Sort filters
+// Search, Sort & Per-Page filters
 const searchBerita = ref(props.filters?.search_berita || "");
 const sortBerita = ref(props.filters?.sort_berita || "latest");
 const sortByBerita = ref(props.filters?.sort_by_berita || "");
 const sortDirBerita = ref(props.filters?.sort_dir_berita || "asc");
+const perPageBerita = ref(props.filters?.per_page_berita || 10);
 
 const searchGaleri = ref(props.filters?.search_galeri || "");
 const sortGaleri = ref(props.filters?.sort_galeri || "latest");
 const sortByGaleri = ref(props.filters?.sort_by_galeri || "");
 const sortDirGaleri = ref(props.filters?.sort_dir_galeri || "asc");
+const perPageGaleri = ref(props.filters?.per_page_galeri || 12);
 
 const handleBeritaFilter = () => {
     router.get(
@@ -67,10 +77,12 @@ const handleBeritaFilter = () => {
             sort_berita: sortBerita.value,
             sort_by_berita: sortByBerita.value,
             sort_dir_berita: sortDirBerita.value,
+            per_page_berita: perPageBerita.value,
             search_galeri: searchGaleri.value,
             sort_galeri: sortGaleri.value,
             sort_by_galeri: sortByGaleri.value,
             sort_dir_galeri: sortDirGaleri.value,
+            per_page_galeri: perPageGaleri.value,
         },
         {
             preserveState: true,
@@ -78,6 +90,15 @@ const handleBeritaFilter = () => {
             replace: true,
         },
     );
+};
+
+const resetBeritaFilter = () => {
+    searchBerita.value = "";
+    sortBerita.value = "latest";
+    sortByBerita.value = "";
+    sortDirBerita.value = "asc";
+    perPageBerita.value = 10;
+    handleBeritaFilter();
 };
 
 const onSortBerita = (column, direction) => {
@@ -94,10 +115,12 @@ const handleGaleriFilter = () => {
             sort_berita: sortBerita.value,
             sort_by_berita: sortByBerita.value,
             sort_dir_berita: sortDirBerita.value,
+            per_page_berita: perPageBerita.value,
             search_galeri: searchGaleri.value,
             sort_galeri: sortGaleri.value,
             sort_by_galeri: sortByGaleri.value,
             sort_dir_galeri: sortDirGaleri.value,
+            per_page_galeri: perPageGaleri.value,
         },
         {
             preserveState: true,
@@ -107,10 +130,177 @@ const handleGaleriFilter = () => {
     );
 };
 
+const resetGaleriFilter = () => {
+    searchGaleri.value = "";
+    sortGaleri.value = "latest";
+    sortByGaleri.value = "";
+    sortDirGaleri.value = "asc";
+    perPageGaleri.value = 12;
+    handleGaleriFilter();
+};
+
 const onSortGaleri = (column, direction) => {
     sortByGaleri.value = column;
     sortDirGaleri.value = direction;
     handleGaleriFilter();
+};
+
+// --- LOGIKA PARSING DAN TOGGLE TAGS DINAMIS ---
+const parseTags = (tags) => {
+    if (!tags) return [];
+    if (Array.isArray(tags)) {
+        return tags.map((t) => String(t).trim()).filter(Boolean);
+    }
+    if (typeof tags === "string") {
+        if (tags.startsWith("[") && tags.endsWith("]")) {
+            try {
+                const parsed = JSON.parse(tags);
+                if (Array.isArray(parsed)) {
+                    return parsed.map((t) => String(t).trim()).filter(Boolean);
+                }
+            } catch (e) {}
+        }
+        return tags
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean);
+    }
+    return [String(tags).trim()].filter(Boolean);
+};
+
+const expandedTags = ref(new Set());
+
+const toggleExpandTags = (id) => {
+    const next = new Set(expandedTags.value);
+    if (next.has(id)) {
+        next.delete(id);
+    } else {
+        next.add(id);
+    }
+    expandedTags.value = next;
+};
+
+const filterByTag = (tag) => {
+    searchBerita.value = tag;
+    handleBeritaFilter();
+};
+
+// --- BULK SELECTION & BULK DELETE ---
+const selectedBeritaIds = ref([]);
+const selectedGaleriIds = ref([]);
+
+const isAllBeritaSelected = computed(() => {
+    const list = props.berita?.data || [];
+    if (!list.length) return false;
+    return list.every((item) => selectedBeritaIds.value.includes(item.id));
+});
+
+const isSomeBeritaSelected = computed(() => {
+    const list = props.berita?.data || [];
+    return selectedBeritaIds.value.length > 0 && !isAllBeritaSelected.value;
+});
+
+const toggleSelectAllBerita = () => {
+    const list = props.berita?.data || [];
+    if (isAllBeritaSelected.value) {
+        selectedBeritaIds.value = [];
+    } else {
+        selectedBeritaIds.value = list.map((item) => item.id);
+    }
+};
+
+const toggleSelectBerita = (id) => {
+    const idx = selectedBeritaIds.value.indexOf(id);
+    if (idx > -1) {
+        selectedBeritaIds.value.splice(idx, 1);
+    } else {
+        selectedBeritaIds.value.push(id);
+    }
+};
+
+const bulkDeleteBerita = () => {
+    if (!selectedBeritaIds.value.length) return;
+    if (
+        !confirm(
+            `Apakah Anda yakin ingin menghapus ${selectedBeritaIds.value.length} berita terpilih?`,
+        )
+    ) {
+        return;
+    }
+
+    router.post(
+        "/admin/berita/bulk-delete",
+        { ids: selectedBeritaIds.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selectedBeritaIds.value = [];
+            },
+        },
+    );
+};
+
+const isAllGaleriSelected = computed(() => {
+    const list = props.galeri?.data || [];
+    if (!list.length) return false;
+    return list.every((item) => selectedGaleriIds.value.includes(item.id));
+});
+
+const isSomeGaleriSelected = computed(() => {
+    const list = props.galeri?.data || [];
+    return selectedGaleriIds.value.length > 0 && !isAllGaleriSelected.value;
+});
+
+const toggleSelectAllGaleri = () => {
+    const list = props.galeri?.data || [];
+    if (isAllGaleriSelected.value) {
+        selectedGaleriIds.value = [];
+    } else {
+        selectedGaleriIds.value = list.map((item) => item.id);
+    }
+};
+
+const toggleSelectGaleri = (id) => {
+    const idx = selectedGaleriIds.value.indexOf(id);
+    if (idx > -1) {
+        selectedGaleriIds.value.splice(idx, 1);
+    } else {
+        selectedGaleriIds.value.push(id);
+    }
+};
+
+const bulkDeleteGaleri = () => {
+    if (!selectedGaleriIds.value.length) return;
+    if (
+        !confirm(
+            `Apakah Anda yakin ingin menghapus ${selectedGaleriIds.value.length} foto galeri terpilih?`,
+        )
+    ) {
+        return;
+    }
+
+    router.post(
+        "/admin/berita/bulk-delete",
+        { ids: selectedGaleriIds.value },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                selectedGaleriIds.value = [];
+            },
+        },
+    );
+};
+
+// --- MODAL ZOOM FOTO ---
+const isZoomOpen = ref(false);
+const zoomImageUrl = ref("");
+const zoomImageTitle = ref("");
+
+const openZoom = (url, title = "") => {
+    if (!url) return;
+    zoomImageUrl.value = url;
+    zoomImageTitle.value = title;
+    isZoomOpen.value = true;
 };
 
 const form = useForm({
@@ -283,7 +473,7 @@ const getImageUrl = (val) => {
             <div v-if="activeTab === 'berita'" class="space-y-3">
                 <!-- Filter & Search Toolbar -->
                 <div
-                    class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs"
+                    class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs"
                 >
                     <div class="relative flex-1">
                         <Search
@@ -307,7 +497,25 @@ const getImageUrl = (val) => {
                             <X class="w-3.5 h-3.5" />
                         </button>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center flex-wrap gap-2">
+                        <!-- Per-Page Selector -->
+                        <div
+                            class="flex items-center gap-1.5 text-xs text-slate-500 font-medium"
+                        >
+                            <span class="hidden sm:inline">Baris:</span>
+                            <select
+                                v-model.number="perPageBerita"
+                                @change="handleBeritaFilter"
+                                class="h-9 px-2.5 text-xs font-semibold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-600 cursor-pointer"
+                            >
+                                <option :value="10">10 / hal</option>
+                                <option :value="25">25 / hal</option>
+                                <option :value="50">50 / hal</option>
+                                <option :value="100">100 / hal</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort Selector -->
                         <select
                             v-model="sortBerita"
                             @change="handleBeritaFilter"
@@ -318,13 +526,66 @@ const getImageUrl = (val) => {
                             <option value="title_asc">Judul (A-Z)</option>
                             <option value="title_desc">Judul (Z-A)</option>
                         </select>
+
+                        <!-- Cari Button -->
                         <Button
                             variant="secondary"
                             size="sm"
                             @click="handleBeritaFilter"
-                            class="h-9 px-3 text-xs"
+                            class="h-9 px-3 text-xs gap-1.5"
                         >
-                            Cari
+                            <Search class="w-3.5 h-3.5" />
+                            <span>Cari</span>
+                        </Button>
+
+                        <!-- Reset Filter Button -->
+                        <Button
+                            v-if="
+                                searchBerita ||
+                                sortBerita !== 'latest' ||
+                                sortByBerita ||
+                                perPageBerita !== 10
+                            "
+                            variant="outline"
+                            size="sm"
+                            @click="resetBeritaFilter"
+                            title="Reset Semua Filter"
+                            class="h-9 px-2.5 text-xs text-slate-600 hover:text-slate-900 border-dashed"
+                        >
+                            <RotateCcw class="w-3.5 h-3.5" />
+                            <span class="hidden sm:inline ml-1">Reset</span>
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Bulk Action Bar: Berita -->
+                <div
+                    v-if="selectedBeritaIds.length > 0"
+                    class="flex items-center justify-between gap-3 px-4 py-2.5 bg-blue-50/90 border border-blue-200 rounded-2xl animate-in fade-in slide-in-from-top-1 duration-200"
+                >
+                    <div class="flex items-center gap-2">
+                        <CheckSquare class="w-4 h-4 text-blue-600" />
+                        <span class="text-xs font-bold text-blue-900">
+                            {{ selectedBeritaIds.length }} berita terpilih
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            @click="selectedBeritaIds = []"
+                            class="h-8 px-2.5 text-xs text-blue-700 hover:bg-blue-100"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            @click="bulkDeleteBerita"
+                            class="h-8 px-3 text-xs gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            <Trash2 class="w-3.5 h-3.5" />
+                            <span>Hapus Terpilih</span>
                         </Button>
                     </div>
                 </div>
@@ -336,12 +597,24 @@ const getImageUrl = (val) => {
                         <Table class="w-full">
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead class="w-10 text-center">
+                                        <input
+                                            type="checkbox"
+                                            :checked="isAllBeritaSelected"
+                                            :indeterminate.prop="
+                                                isSomeBeritaSelected
+                                            "
+                                            @change="toggleSelectAllBerita"
+                                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
+                                            title="Pilih Semua di Halaman Ini"
+                                        />
+                                    </TableHead>
                                     <TableHead
                                         class="w-12 text-center text-xs font-semibold"
                                         >No</TableHead
                                     >
-                                    <TableHead class="w-20">Cover</TableHead>
-                                    <TableHead class="min-w-[240px]">
+                                    <TableHead class="w-24">Cover</TableHead>
+                                    <TableHead class="min-w-[260px]">
                                         <DataTableColumnHeader
                                             title="Judul Berita"
                                             column="judul_berita"
@@ -350,7 +623,9 @@ const getImageUrl = (val) => {
                                             @sort="onSortBerita"
                                         />
                                     </TableHead>
-                                    <TableHead class="w-44">
+                                    <TableHead
+                                        class="min-w-[200px] max-w-[320px]"
+                                    >
                                         <DataTableColumnHeader
                                             title="Tags"
                                             column="tags"
@@ -376,7 +651,7 @@ const getImageUrl = (val) => {
                             <TableBody>
                                 <TableRow v-if="!berita.data?.length">
                                     <TableCell
-                                        colspan="6"
+                                        colspan="7"
                                         class="h-24 text-center text-slate-400"
                                     >
                                         Tidak ada data berita ditemukan.
@@ -385,7 +660,25 @@ const getImageUrl = (val) => {
                                 <TableRow
                                     v-for="(item, index) in berita.data"
                                     :key="item.id"
+                                    :class="{
+                                        'bg-blue-50/40':
+                                            selectedBeritaIds.includes(item.id),
+                                    }"
                                 >
+                                    <TableCell class="text-center">
+                                        <input
+                                            type="checkbox"
+                                            :checked="
+                                                selectedBeritaIds.includes(
+                                                    item.id,
+                                                )
+                                            "
+                                            @change="
+                                                toggleSelectBerita(item.id)
+                                            "
+                                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
+                                        />
+                                    </TableCell>
                                     <TableCell
                                         class="text-center font-mono text-[11px] text-slate-400 font-semibold"
                                     >
@@ -397,35 +690,140 @@ const getImageUrl = (val) => {
                                         }}
                                     </TableCell>
                                     <TableCell>
-                                        <img
+                                        <div
                                             v-if="item.file_foto"
-                                            :src="getImageUrl(item.file_foto)"
-                                            class="h-10 w-16 object-cover rounded-lg border border-slate-200 shadow-2xs"
-                                            alt="Foto"
-                                        />
+                                            @click="
+                                                openZoom(
+                                                    getImageUrl(item.file_foto),
+                                                    item.judul_berita,
+                                                )
+                                            "
+                                            class="relative group/thumb h-11 w-18 rounded-lg overflow-hidden border border-slate-200 shadow-2xs cursor-zoom-in bg-slate-100 flex-shrink-0"
+                                            title="Klik untuk memperbesar gambar"
+                                        >
+                                            <img
+                                                :src="
+                                                    getImageUrl(item.file_foto)
+                                                "
+                                                class="h-full w-full object-cover transition-transform duration-200 group-hover/thumb:scale-105"
+                                                alt="Cover"
+                                            />
+                                            <div
+                                                class="absolute inset-0 bg-slate-900/35 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white"
+                                            >
+                                                <ZoomIn
+                                                    class="w-4 h-4 drop-shadow"
+                                                />
+                                            </div>
+                                        </div>
                                         <div
                                             v-else
-                                            class="h-10 w-16 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 text-xs"
+                                            class="h-11 w-18 rounded-lg bg-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-400"
                                         >
                                             <ImageIcon class="w-4 h-4" />
                                         </div>
                                     </TableCell>
-                                    <TableCell
-                                        class="font-bold text-slate-900 max-w-sm truncate"
-                                    >
-                                        {{ item.judul_berita }}
+                                    <TableCell class="align-middle">
+                                        <div class="space-y-1">
+                                            <p
+                                                class="font-bold text-slate-900 text-sm leading-snug line-clamp-2"
+                                                :title="item.judul_berita"
+                                            >
+                                                {{ item.judul_berita }}
+                                            </p>
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <a
+                                                    :href="`/berita-informasi/berita/${item.id}`"
+                                                    target="_blank"
+                                                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                                                    title="Buka artikel di tab baru"
+                                                >
+                                                    <span>Lihat Artikel</span>
+                                                    <ExternalLink
+                                                        class="w-3 h-3"
+                                                    />
+                                                </a>
+                                            </div>
+                                        </div>
                                     </TableCell>
-                                    <TableCell>
-                                        <Badge
-                                            variant="secondary"
-                                            class="text-[10px] font-semibold text-blue-700 bg-blue-50 border-blue-200"
+                                    <TableCell class="align-middle">
+                                        <!-- Kotak Tags Dinamis -->
+                                        <div
+                                            v-if="parseTags(item.tags).length"
+                                            class="flex flex-wrap items-center gap-1.5 max-w-[320px]"
                                         >
-                                            {{
-                                                Array.isArray(item.tags)
-                                                    ? item.tags.join(", ")
-                                                    : item.tags || "Berita"
-                                            }}
-                                        </Badge>
+                                            <button
+                                                v-for="(
+                                                    tag, tIdx
+                                                ) in expandedTags.has(item.id)
+                                                    ? parseTags(item.tags)
+                                                    : parseTags(
+                                                          item.tags,
+                                                      ).slice(0, 2)"
+                                                :key="tIdx"
+                                                type="button"
+                                                @click="filterByTag(tag)"
+                                                :title="`Cari berita dengan tag: ${tag}`"
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200/80 hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer group/tag"
+                                            >
+                                                <Tag
+                                                    class="w-2.5 h-2.5 text-blue-500 group-hover/tag:text-blue-700"
+                                                />
+                                                <span
+                                                    class="truncate max-w-[120px]"
+                                                    >{{ tag }}</span
+                                                >
+                                            </button>
+
+                                            <button
+                                                v-if="
+                                                    parseTags(item.tags)
+                                                        .length > 2
+                                                "
+                                                type="button"
+                                                @click="
+                                                    toggleExpandTags(item.id)
+                                                "
+                                                class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200 transition-colors cursor-pointer"
+                                            >
+                                                <span
+                                                    v-if="
+                                                        !expandedTags.has(
+                                                            item.id,
+                                                        )
+                                                    "
+                                                    >+{{
+                                                        parseTags(item.tags)
+                                                            .length - 2
+                                                    }}
+                                                    lainnya</span
+                                                >
+                                                <span
+                                                    v-else
+                                                    class="text-[10px] text-slate-500"
+                                                    >Tutup</span
+                                                >
+                                                <ChevronDown
+                                                    v-if="
+                                                        !expandedTags.has(
+                                                            item.id,
+                                                        )
+                                                    "
+                                                    class="w-3 h-3"
+                                                />
+                                                <ChevronUp
+                                                    v-else
+                                                    class="w-3 h-3"
+                                                />
+                                            </button>
+                                        </div>
+                                        <span
+                                            v-else
+                                            class="text-xs text-slate-400 italic"
+                                            >-</span
+                                        >
                                     </TableCell>
                                     <TableCell
                                         class="text-slate-500 font-mono text-[11px]"
@@ -478,9 +876,9 @@ const getImageUrl = (val) => {
 
             <!-- Table: Galeri -->
             <div v-if="activeTab === 'galeri'" class="space-y-3">
-                <!-- Filter & Search Toolbar -->
+                <!-- Filter & Search Toolbar: Galeri -->
                 <div
-                    class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs"
+                    class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs"
                 >
                     <div class="relative flex-1">
                         <Search
@@ -504,7 +902,25 @@ const getImageUrl = (val) => {
                             <X class="w-3.5 h-3.5" />
                         </button>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center flex-wrap gap-2">
+                        <!-- Per-Page Selector Galeri -->
+                        <div
+                            class="flex items-center gap-1.5 text-xs text-slate-500 font-medium"
+                        >
+                            <span class="hidden sm:inline">Baris:</span>
+                            <select
+                                v-model.number="perPageGaleri"
+                                @change="handleGaleriFilter"
+                                class="h-9 px-2.5 text-xs font-semibold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-600 cursor-pointer"
+                            >
+                                <option :value="12">12 / hal</option>
+                                <option :value="24">24 / hal</option>
+                                <option :value="48">48 / hal</option>
+                                <option :value="96">96 / hal</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort Selector Galeri -->
                         <select
                             v-model="sortGaleri"
                             @change="handleGaleriFilter"
@@ -513,13 +929,66 @@ const getImageUrl = (val) => {
                             <option value="latest">Terbaru</option>
                             <option value="oldest">Terlama</option>
                         </select>
+
+                        <!-- Cari Button -->
                         <Button
                             variant="secondary"
                             size="sm"
                             @click="handleGaleriFilter"
-                            class="h-9 px-3 text-xs"
+                            class="h-9 px-3 text-xs gap-1.5"
                         >
-                            Cari
+                            <Search class="w-3.5 h-3.5" />
+                            <span>Cari</span>
+                        </Button>
+
+                        <!-- Reset Filter Button -->
+                        <Button
+                            v-if="
+                                searchGaleri ||
+                                sortGaleri !== 'latest' ||
+                                sortByGaleri ||
+                                perPageGaleri !== 12
+                            "
+                            variant="outline"
+                            size="sm"
+                            @click="resetGaleriFilter"
+                            title="Reset Semua Filter"
+                            class="h-9 px-2.5 text-xs text-slate-600 hover:text-slate-900 border-dashed"
+                        >
+                            <RotateCcw class="w-3.5 h-3.5" />
+                            <span class="hidden sm:inline ml-1">Reset</span>
+                        </Button>
+                    </div>
+                </div>
+
+                <!-- Bulk Action Bar: Galeri -->
+                <div
+                    v-if="selectedGaleriIds.length > 0"
+                    class="flex items-center justify-between gap-3 px-4 py-2.5 bg-blue-50/90 border border-blue-200 rounded-2xl animate-in fade-in slide-in-from-top-1 duration-200"
+                >
+                    <div class="flex items-center gap-2">
+                        <CheckSquare class="w-4 h-4 text-blue-600" />
+                        <span class="text-xs font-bold text-blue-900">
+                            {{ selectedGaleriIds.length }} foto terpilih
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            @click="selectedGaleriIds = []"
+                            class="h-8 px-2.5 text-xs text-blue-700 hover:bg-blue-100"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            @click="bulkDeleteGaleri"
+                            class="h-8 px-3 text-xs gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            <Trash2 class="w-3.5 h-3.5" />
+                            <span>Hapus Terpilih</span>
                         </Button>
                     </div>
                 </div>
@@ -531,6 +1000,18 @@ const getImageUrl = (val) => {
                         <Table class="w-full">
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead class="w-10 text-center">
+                                        <input
+                                            type="checkbox"
+                                            :checked="isAllGaleriSelected"
+                                            :indeterminate.prop="
+                                                isSomeGaleriSelected
+                                            "
+                                            @change="toggleSelectAllGaleri"
+                                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
+                                            title="Pilih Semua di Halaman Ini"
+                                        />
+                                    </TableHead>
                                     <TableHead
                                         class="w-12 text-center text-xs font-semibold"
                                         >No</TableHead
@@ -562,7 +1043,7 @@ const getImageUrl = (val) => {
                             <TableBody>
                                 <TableRow v-if="!galeri.data?.length">
                                     <TableCell
-                                        colspan="5"
+                                        colspan="6"
                                         class="h-24 text-center text-slate-400"
                                     >
                                         Tidak ada foto galeri ditemukan.
@@ -571,7 +1052,25 @@ const getImageUrl = (val) => {
                                 <TableRow
                                     v-for="(item, index) in galeri.data"
                                     :key="item.id"
+                                    :class="{
+                                        'bg-blue-50/40':
+                                            selectedGaleriIds.includes(item.id),
+                                    }"
                                 >
+                                    <TableCell class="text-center">
+                                        <input
+                                            type="checkbox"
+                                            :checked="
+                                                selectedGaleriIds.includes(
+                                                    item.id,
+                                                )
+                                            "
+                                            @change="
+                                                toggleSelectGaleri(item.id)
+                                            "
+                                            class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer w-4 h-4"
+                                        />
+                                    </TableCell>
                                     <TableCell
                                         class="text-center font-mono text-[11px] text-slate-400 font-semibold"
                                     >
@@ -583,15 +1082,35 @@ const getImageUrl = (val) => {
                                         }}
                                     </TableCell>
                                     <TableCell>
-                                        <img
+                                        <div
                                             v-if="item.file_foto"
-                                            :src="getImageUrl(item.file_foto)"
-                                            class="h-12 w-20 object-cover rounded-xl border border-slate-200 shadow-2xs"
-                                            alt="Foto"
-                                        />
+                                            @click="
+                                                openZoom(
+                                                    getImageUrl(item.file_foto),
+                                                    item.keterangan_galeri,
+                                                )
+                                            "
+                                            class="relative group/thumb h-12 w-20 rounded-xl overflow-hidden border border-slate-200 shadow-2xs cursor-zoom-in bg-slate-100 flex-shrink-0"
+                                            title="Klik untuk memperbesar gambar"
+                                        >
+                                            <img
+                                                :src="
+                                                    getImageUrl(item.file_foto)
+                                                "
+                                                class="h-full w-full object-cover transition-transform duration-200 group-hover/thumb:scale-105"
+                                                alt="Foto"
+                                            />
+                                            <div
+                                                class="absolute inset-0 bg-slate-900/35 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-white"
+                                            >
+                                                <ZoomIn
+                                                    class="w-4 h-4 drop-shadow"
+                                                />
+                                            </div>
+                                        </div>
                                         <div
                                             v-else
-                                            class="h-12 w-20 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400"
+                                            class="h-12 w-20 rounded-xl bg-slate-100 border border-slate-200/60 flex items-center justify-center text-slate-400"
                                         >
                                             <ImageIcon class="w-5 h-5" />
                                         </div>
@@ -648,6 +1167,43 @@ const getImageUrl = (val) => {
                 </div>
             </div>
         </div>
+
+        <!-- MODAL ZOOM FOTO LIGHTBOX -->
+        <Dialog :open="isZoomOpen" @update:open="isZoomOpen = $event">
+            <DialogContent
+                class="sm:max-w-3xl p-4 overflow-hidden bg-slate-950/95 border-slate-800 text-white"
+            >
+                <DialogHeader class="mb-2">
+                    <DialogTitle
+                        class="text-sm font-semibold text-slate-200 truncate"
+                    >
+                        {{ zoomImageTitle || "Preview Foto" }}
+                    </DialogTitle>
+                </DialogHeader>
+                <div
+                    class="relative w-full max-h-[75vh] flex items-center justify-center bg-black/60 rounded-xl overflow-hidden"
+                >
+                    <img
+                        :src="zoomImageUrl"
+                        alt="Zoom Preview"
+                        class="max-h-[75vh] w-auto max-w-full object-contain rounded-lg"
+                    />
+                </div>
+                <div
+                    class="flex items-center justify-between pt-2 text-xs text-slate-400"
+                >
+                    <span class="truncate max-w-md">{{ zoomImageTitle }}</span>
+                    <a
+                        :href="zoomImageUrl"
+                        target="_blank"
+                        class="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium"
+                    >
+                        <ExternalLink class="w-3.5 h-3.5" />
+                        <span>Buka Tab Baru</span>
+                    </a>
+                </div>
+            </DialogContent>
+        </Dialog>
 
         <!-- SHADCN DIALOG / MODAL DENGAN UPLOAD FOTO & WORD-STYLE EDITOR -->
         <Dialog :open="isDialogOpen" @update:open="isDialogOpen = $event">

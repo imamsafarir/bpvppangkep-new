@@ -9,7 +9,11 @@ defineProps({
 </script>
 
 <template>
-    <AppLayout title="Sambutan Kepala Balai" :settings="settings">
+    <AppLayout
+        title="Sambutan Kepala Balai"
+        description="Sambutan resmi Kepala Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkajene dan Kepulauan Kementerian Ketenagakerjaan RI."
+        :settings="settings"
+    >
         <main class="py-12 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Breadcrumbs -->

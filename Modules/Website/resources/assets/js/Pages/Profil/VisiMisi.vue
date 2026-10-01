@@ -9,8 +9,11 @@ defineProps({
 </script>
 
 <template>
-    <Head title="Visi & Misi" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Visi, Misi & Nilai Budaya Kerja"
+        description="Visi, misi, dan nilai budaya kerja Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkajene dan Kepulauan Kementerian Ketenagakerjaan RI."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

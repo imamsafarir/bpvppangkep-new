@@ -27,6 +27,23 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
+     * Handle the incoming request and prevent stale browser caching.
+     */
+    public function handle(Request $request, \Closure $next)
+    {
+        $response = parent::handle($request, $next);
+
+        // Always prevent stale browser caching on Inertia responses and admin/dashboard requests
+        if ($request->header('X-Inertia') || $request->is('admin*', 'dashboard*', 'lms/admin*', 'lms/student*')) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', 'Sat, 01 Jan 2000 00:00:00 GMT');
+        }
+
+        return $response;
+    }
+
+    /**
      * Define the props that are shared by default.
      *
      * @see https://inertiajs.com/shared-data

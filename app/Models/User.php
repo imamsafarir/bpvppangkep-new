@@ -111,6 +111,15 @@ class User extends Authenticatable
                 $normalizedRoles[] = 'admin_shortlink';
             } elseif ($r === 'admin_shortlink') {
                 $normalizedRoles[] = 'shortlink';
+            } elseif ($r === 'lms') {
+                $normalizedRoles[] = 'admin_lms';
+            } elseif ($r === 'admin_lms') {
+                $normalizedRoles[] = 'lms';
+            } elseif ($r === 'admin_lms_instructor') {
+                $normalizedRoles[] = 'instructor';
+                $normalizedRoles[] = 'lms_instructor';
+            } elseif ($r === 'instructor' || $r === 'lms_instructor') {
+                $normalizedRoles[] = 'admin_lms_instructor';
             }
         }
 

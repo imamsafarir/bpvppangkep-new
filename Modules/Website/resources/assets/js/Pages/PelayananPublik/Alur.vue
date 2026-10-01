@@ -49,8 +49,11 @@ const hasMainAlur = () => {
 </script>
 
 <template>
-    <Head title="Alur Pelayanan" />
-    <AppLayout :settings="settings">
+    <AppLayout
+        title="Alur & Prosedur Pelayanan Publik"
+        description="Bagan dan panduan alur prosedur pelayanan pendaftaran pelatihan vokasi, sertifikasi, konsultasi, dan PPID BPVP Pangkep."
+        :settings="settings"
+    >
         <main class="pt-32 pb-16 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <nav

@@ -9,7 +9,11 @@ defineProps({
 </script>
 
 <template>
-    <AppLayout title="Tentang Kami" :settings="settings">
+    <AppLayout
+        title="Tentang Kami & Profil Lembaga"
+        description="Profil lengkap Balai Pelatihan Vokasi dan Produktivitas (BPVP) Pangkajene dan Kepulauan, Unit Pelaksana Teknis Pusat (UPTP) Kemnaker RI."
+        :settings="settings"
+    >
         <main class="py-12 min-h-screen">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Breadcrumbs -->
