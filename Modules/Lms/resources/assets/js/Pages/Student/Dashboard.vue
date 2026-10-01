@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import {
     GraduationCap,
@@ -13,6 +14,7 @@ import {
     Video,
     FileText,
     Lock,
+    Loader2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -21,8 +23,18 @@ const props = defineProps({
     stats: Object,
 });
 
+const isLoggingOut = ref(false);
 const logout = () => {
-    router.post("/lms/logout");
+    isLoggingOut.value = true;
+    router.post(
+        "/lms/logout",
+        {},
+        {
+            onFinish: () => {
+                isLoggingOut.value = false;
+            },
+        },
+    );
 };
 
 const formatDateIndo = (dateStr) => {
@@ -96,11 +108,13 @@ const formatDateRange = (start, end) => {
 
                     <button
                         @click="logout"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-lg transition-colors"
+                        :disabled="isLoggingOut"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/50 hover:bg-rose-100 dark:hover:bg-rose-900/60 rounded-lg transition-colors disabled:opacity-50"
                         title="Keluar dari akun LMS"
                     >
-                        <LogOut class="w-3.5 h-3.5" />
-                        <span class="hidden sm:inline">Keluar</span>
+                        <Loader2 v-if="isLoggingOut" class="w-3.5 h-3.5 animate-spin" />
+                        <LogOut v-else class="w-3.5 h-3.5" />
+                        <span class="hidden sm:inline">{{ isLoggingOut ? "Keluar..." : "Keluar" }}</span>
                     </button>
                 </div>
             </div>

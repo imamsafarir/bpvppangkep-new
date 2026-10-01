@@ -633,10 +633,10 @@ const submit = () => {
                 <div class="flex items-center gap-2">
                     <Button
                         @click="submit"
-                        :disabled="form.processing"
+                        :loading="form.processing"
                         class="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 gap-1.5"
                     >
-                        <Save class="w-4 h-4" />
+                        <Save v-if="!form.processing" class="w-4 h-4" />
                         <span>{{
                             form.processing
                                 ? "Menyimpan..."

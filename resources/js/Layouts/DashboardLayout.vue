@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { Head, Link, usePage, router, useForm } from "@inertiajs/vue3";
 import { Avatar, AvatarFallback } from "@/Components/ui/avatar";
 import { Badge } from "@/Components/ui/badge";
@@ -41,11 +41,42 @@ import {
     Eye,
     EyeOff,
     Lock,
+    Loader2,
 } from "lucide-vue-next";
 
 const page = usePage();
 const user = computed(() => page.props.auth?.user || {});
 const settings = computed(() => page.props.settings || {});
+
+// --- GLOBAL ACTIVITY LOADING STATE ---
+const isNavigating = ref(false);
+const activeActionMessage = ref("");
+let unregisterStart = null;
+let unregisterFinish = null;
+
+onMounted(() => {
+    unregisterStart = router.on("start", (event) => {
+        isNavigating.value = true;
+        const method = (event.detail?.visit?.method || "GET").toUpperCase();
+        if (method === "POST" || method === "PUT" || method === "PATCH") {
+            activeActionMessage.value = "Menyimpan data & memperbarui...";
+        } else if (method === "DELETE") {
+            activeActionMessage.value = "Menghapus data...";
+        } else {
+            activeActionMessage.value = "Memuat data...";
+        }
+    });
+
+    unregisterFinish = router.on("finish", () => {
+        isNavigating.value = false;
+        activeActionMessage.value = "";
+    });
+});
+
+onUnmounted(() => {
+    if (unregisterStart) unregisterStart();
+    if (unregisterFinish) unregisterFinish();
+});
 
 // --- LOGIKA SALIN TAUTAN (COPY TO CLIPBOARD) ---
 const copiedHref = ref("");
@@ -543,6 +574,24 @@ const navigation = [
         <link rel="shortcut icon" :href="faviconUrl" />
         <link rel="apple-touch-icon" :href="faviconUrl" />
     </Head>
+
+    <!-- Floating Global Activity Indicator for all Inertia mutations / visits -->
+    <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 -translate-y-2 scale-95"
+        enter-to-class="opacity-100 translate-y-0 scale-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0 scale-100"
+        leave-to-class="opacity-0 -translate-y-2 scale-95"
+    >
+        <div
+            v-if="isNavigating"
+            class="fixed top-4 right-4 z-[9999] flex items-center gap-2.5 px-4 py-2 bg-slate-900/90 text-white backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-xl text-xs font-semibold pointer-events-none tracking-wide"
+        >
+            <Loader2 class="w-4 h-4 animate-spin text-blue-400 shrink-0" />
+            <span>{{ activeActionMessage || "Sedang memproses..." }}</span>
+        </div>
+    </Transition>
 
     <div
         class="h-screen w-screen overflow-hidden bg-slate-50 flex font-sans text-slate-900 antialiased selection:bg-blue-600 selection:text-white"
@@ -1254,12 +1303,9 @@ const navigation = [
                             type="submit"
                             size="sm"
                             class="bg-blue-600 hover:bg-blue-700 text-white"
-                            :disabled="passwordForm.processing"
+                            :loading="passwordForm.processing"
                         >
-                            <span v-if="passwordForm.processing"
-                                >Menyimpan...</span
-                            >
-                            <span v-else>Perbarui Password</span>
+                            {{ passwordForm.processing ? "Menyimpan..." : "Perbarui Password" }}
                         </Button>
                     </DialogFooter>
                 </form>

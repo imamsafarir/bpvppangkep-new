@@ -198,7 +198,7 @@ class ModuleLessonController extends Controller
         $validated = $request->validate([
             'module_id' => 'required|exists:lms_modules,id',
             'title' => 'required|string|max:255',
-            'content_type' => 'required|in:video,article,image',
+            'content_type' => 'required|in:video,article,image,pdf',
             'content_text' => 'nullable|string',
             'video_url' => 'nullable|string|max:500',
             'estimated_duration_minutes' => 'nullable|integer|min:1|max:600',
@@ -240,7 +240,7 @@ class ModuleLessonController extends Controller
         $validated = $request->validate([
             'module_id' => 'required|exists:lms_modules,id',
             'title' => 'required|string|max:255',
-            'content_type' => 'required|in:video,article,image',
+            'content_type' => 'required|in:video,article,image,pdf',
             'content_text' => 'nullable|string',
             'video_url' => 'nullable|string|max:500',
             'estimated_duration_minutes' => 'nullable|integer|min:1|max:600',
@@ -454,7 +454,7 @@ class ModuleLessonController extends Controller
             $lessonTitle = trim((string) ($row['judul_elemen'] ?? ''));
             if (!empty($lessonTitle)) {
                 $contentType = strtolower(trim((string) ($row['tipe_konten'] ?? 'article')));
-                if (!in_array($contentType, ['article', 'video', 'image'])) {
+                if (!in_array($contentType, ['article', 'video', 'image', 'pdf'])) {
                     $contentType = 'article';
                 }
 

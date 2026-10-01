@@ -22,6 +22,7 @@ import {
     Edit3,
     AlertCircle,
     Lock,
+    Loader2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -168,14 +169,19 @@ const submitDuplicate = () => {
 };
 
 // Delete Course Action
+const deletingCourseId = ref(null);
 const deleteCourse = (course) => {
     if (
         confirm(
             `Apakah Anda yakin ingin menghapus kelas "${course.title}"? Data peserta dan materi di kelas ini akan dinonaktifkan.`,
         )
     ) {
+        deletingCourseId.value = course.id;
         router.delete(`/admin/lms/${course.id}`, {
             preserveScroll: true,
+            onFinish: () => {
+                deletingCourseId.value = null;
+            },
         });
     }
 };
@@ -661,11 +667,16 @@ const formatDateRange = (start, end) => {
                         <!-- Delete (Only if can_manage) -->
                         <button
                             v-if="course.can_manage"
+                            :disabled="deletingCourseId === course.id"
                             @click="deleteCourse(course)"
                             title="Hapus Kelas"
-                            class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors"
+                            class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
                         >
-                            <Trash2 class="w-4 h-4" />
+                            <Loader2
+                                v-if="deletingCourseId === course.id"
+                                class="w-4 h-4 animate-spin text-rose-600"
+                            />
+                            <Trash2 v-else class="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -923,15 +934,19 @@ const formatDateRange = (start, end) => {
                         <button
                             type="submit"
                             :disabled="form.processing"
-                            class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                            class="px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 inline-flex items-center gap-2 cursor-pointer"
                         >
-                            {{
+                            <Loader2
+                                v-if="form.processing"
+                                class="w-4 h-4 animate-spin shrink-0"
+                            />
+                            <span>{{
                                 form.processing
                                     ? "Menyimpan..."
                                     : isEditing
                                       ? "Simpan Perubahan"
                                       : "Buat Kelas & Buka Workspace"
-                            }}
+                            }}</span>
                         </button>
                     </div>
                 </form>
@@ -1076,9 +1091,13 @@ const formatDateRange = (start, end) => {
                         <button
                             type="submit"
                             :disabled="duplicateForm.processing"
-                            class="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                            class="px-5 py-2.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                         >
-                            <Copy class="w-3.5 h-3.5" />
+                            <Loader2
+                                v-if="duplicateForm.processing"
+                                class="w-3.5 h-3.5 animate-spin shrink-0"
+                            />
+                            <Copy v-else class="w-3.5 h-3.5" />
                             <span>{{
                                 duplicateForm.processing
                                     ? "Menduplikasi..."

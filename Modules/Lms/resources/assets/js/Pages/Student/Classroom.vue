@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import axios from "axios";
+import PdfBookViewer from "../../Components/PdfBookViewer.vue";
 import {
     ArrowLeft,
     Video,
@@ -25,6 +26,7 @@ import {
     Check,
     X,
     RotateCcw,
+    Loader2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -287,6 +289,22 @@ const formatReadableDate = (dateStr) => {
 const completedIds = ref([...props.completedLessonIds]);
 const currentProgress = ref(props.progressPercentage || 0);
 
+// PDF reading completion tracking (lessonId => boolean)
+const completedPdfLessons = ref({});
+
+const onPdfCompleted = (lessonId) => {
+    completedPdfLessons.value[lessonId] = true;
+};
+
+const canCompleteActiveLesson = computed(() => {
+    if (!activeLesson.value) return false;
+    if (activeLesson.value.content_type === "pdf") {
+        if (completedIds.value.includes(activeLesson.value.id)) return true;
+        return Boolean(completedPdfLessons.value[activeLesson.value.id]);
+    }
+    return true;
+});
+
 // Active selected lesson
 const allLessons = computed(() => {
     const list = [];
@@ -332,6 +350,14 @@ const quizAnswers = ref({});
 const isSubmittingQuiz = ref(false);
 const quizResult = ref(null);
 
+const getPdfUrl = (path) => {
+    if (!path) return "";
+    if (path.startsWith("http://") || path.startsWith("https://")) return path;
+    if (path.startsWith("/storage/")) return path;
+    if (path.startsWith("storage/")) return "/" + path;
+    return "/storage/" + path;
+};
+
 const selectLesson = (lesson, mod, mIdx) => {
     if (mod && isModuleLocked(mod, mIdx)) {
         alert(
@@ -340,7 +366,10 @@ const selectLesson = (lesson, mod, mIdx) => {
         return;
     }
     activeItemType.value = "lesson";
-    activeLesson.value = lesson;
+    activeLesson.value = {
+        ...lesson,
+        module_title: mod ? mod.title : (lesson.module_title || ""),
+    };
     activeQuiz.value = null;
     quizResult.value = null;
 };
@@ -415,6 +444,12 @@ const retakeQuiz = () => {
 const isSubmittingLesson = ref(false);
 const markComplete = async (lesson) => {
     if (!lesson) return;
+    if (lesson.content_type === "pdf" && !canCompleteActiveLesson.value) {
+        alert(
+            "Anda harus membaca materi PDF ini hingga slide terakhir terlebih dahulu untuk menyelesaikan materi.",
+        );
+        return;
+    }
     isSubmittingLesson.value = true;
 
     try {
@@ -1279,7 +1314,8 @@ const getYoutubeEmbedUrl = (url) => {
                                     :disabled="isAttending"
                                     class="w-full sm:w-auto px-8 py-3.5 rounded-xl text-sm font-black text-white bg-rose-600 hover:bg-rose-700 shadow-xl shadow-rose-600/30 transition-all transform active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 mx-auto"
                                 >
-                                    <CheckCircle2 class="w-5 h-5" />
+                                    <Loader2 v-if="isAttending" class="w-5 h-5 animate-spin" />
+                                    <CheckCircle2 v-else class="w-5 h-5" />
                                     <span>{{
                                         isAttending
                                             ? "Mencatat Kehadiran..."
@@ -1356,7 +1392,8 @@ const getYoutubeEmbedUrl = (url) => {
                                             :disabled="isAttendingSelfStudy"
                                             class="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/25 transition-all transform active:scale-95 disabled:opacity-50"
                                         >
-                                            <BookOpen class="w-4 h-4" />
+                                            <Loader2 v-if="isAttendingSelfStudy" class="w-4 h-4 animate-spin" />
+                                            <BookOpen v-else class="w-4 h-4" />
                                             <span>{{
                                                 isAttendingSelfStudy
                                                     ? "Mencatat Presensi Mandiri..."
@@ -1777,6 +1814,9 @@ const getYoutubeEmbedUrl = (url) => {
                                                                       'bg-blue-100 text-blue-600':
                                                                           les.content_type ===
                                                                           'article',
+                                                                      'bg-amber-100 text-amber-600':
+                                                                          les.content_type ===
+                                                                          'pdf',
                                                                       'bg-emerald-100 text-emerald-600':
                                                                           les.content_type ===
                                                                           'image',
@@ -1794,6 +1834,13 @@ const getYoutubeEmbedUrl = (url) => {
                                                             v-else-if="
                                                                 les.content_type ===
                                                                 'article'
+                                                            "
+                                                            class="w-3 h-3"
+                                                        />
+                                                        <BookOpen
+                                                            v-else-if="
+                                                                les.content_type ===
+                                                                'pdf'
                                                             "
                                                             class="w-3 h-3"
                                                         />
@@ -1987,9 +2034,10 @@ const getYoutubeEmbedUrl = (url) => {
                                             "
                                             @click="submitCompleteCourse"
                                             :disabled="isAttending"
-                                            class="w-full py-3.5 px-3 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30 transition-all animate-pulse flex items-center justify-center gap-2 cursor-pointer"
+                                            class="w-full py-3.5 px-3 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30 transition-all animate-pulse flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                                         >
-                                            <CheckCircle2 class="w-4 h-4" />
+                                            <Loader2 v-if="isAttending" class="w-4 h-4 animate-spin" />
+                                            <CheckCircle2 v-else class="w-4 h-4" />
                                             <span>{{
                                                 isAttending
                                                     ? "Memproses..."
@@ -2369,7 +2417,8 @@ const getYoutubeEmbedUrl = (url) => {
                                             :disabled="isSubmittingQuiz"
                                             class="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/25 transition disabled:opacity-50"
                                         >
-                                            <CheckCircle2 class="w-4 h-4" />
+                                            <Loader2 v-if="isSubmittingQuiz" class="w-4 h-4 animate-spin" />
+                                            <CheckCircle2 v-else class="w-4 h-4" />
                                             <span>{{
                                                 isSubmittingQuiz
                                                     ? "Memeriksa Jawaban..."
@@ -2413,9 +2462,10 @@ const getYoutubeEmbedUrl = (url) => {
                                                 "
                                                 @click="submitCompleteCourse"
                                                 :disabled="isAttending"
-                                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse"
+                                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse disabled:opacity-50"
                                             >
-                                                <Award class="w-4 h-4" />
+                                                <Loader2 v-if="isAttending" class="w-4 h-4 animate-spin" />
+                                                <Award v-else class="w-4 h-4" />
                                                 <span>{{
                                                     isAttending
                                                         ? "Memproses..."
@@ -2450,6 +2500,13 @@ const getYoutubeEmbedUrl = (url) => {
                                     </div>
 
                                     <div class="flex items-center gap-2">
+                                        <span
+                                            v-if="activeLesson.content_type === 'pdf'"
+                                            class="text-xs px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 font-bold flex items-center gap-1"
+                                        >
+                                            <BookOpen class="w-3.5 h-3.5" />
+                                            Dokumen PDF
+                                        </span>
                                         <span
                                             class="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold"
                                         >
@@ -2553,7 +2610,40 @@ const getYoutubeEmbedUrl = (url) => {
                                     </div>
                                 </div>
 
-                                <!-- Type 3: Article / Text Content -->
+                                <!-- Type 3: PDF Book / Slide Document -->
+                                <div
+                                    v-else-if="
+                                        activeLesson.content_type === 'pdf'
+                                    "
+                                    class="space-y-4"
+                                >
+                                    <div v-if="activeLesson.media_path">
+                                        <PdfBookViewer
+                                            :pdf-url="
+                                                getPdfUrl(
+                                                    activeLesson.media_path
+                                                )
+                                            "
+                                            :title="activeLesson.title"
+                                            :already-completed="
+                                                completedIds.includes(
+                                                    activeLesson.id,
+                                                )
+                                            "
+                                            @completed="
+                                                onPdfCompleted(activeLesson.id)
+                                            "
+                                        />
+                                    </div>
+                                    <div
+                                        v-else
+                                        class="p-12 text-center bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 text-slate-400 text-xs"
+                                    >
+                                        File dokumen PDF belum diunggah oleh instruktur.
+                                    </div>
+                                </div>
+
+                                <!-- Type 4: Article / Text Content -->
                                 <div
                                     v-if="activeLesson.content_text"
                                     class="prose dark:prose-invert max-w-none text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-xl border border-slate-100 dark:border-slate-800"
@@ -2565,31 +2655,65 @@ const getYoutubeEmbedUrl = (url) => {
                                 <div
                                     class="pt-6 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                                 >
-                                    <span class="text-xs text-slate-500">
-                                        Pastikan Anda telah menyimak materi ini
-                                        sebelum menandai selesai.
-                                    </span>
+                                    <div class="flex items-center gap-2">
+                                        <div
+                                            v-if="
+                                                activeLesson.content_type ===
+                                                    'pdf' &&
+                                                !canCompleteActiveLesson
+                                            "
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium"
+                                        >
+                                            <AlertCircle class="w-4 h-4 shrink-0" />
+                                            <span>
+                                                Buka & baca slide hingga halaman
+                                                terakhir untuk menyelesaikan.
+                                            </span>
+                                        </div>
+                                        <span v-else class="text-xs text-slate-500">
+                                            Pastikan Anda telah menyimak materi ini
+                                            sebelum menandai selesai.
+                                        </span>
+                                    </div>
 
                                     <div class="flex items-center gap-2">
                                         <button
                                             @click="markComplete(activeLesson)"
-                                            :disabled="isSubmittingLesson"
-                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all"
+                                            :disabled="
+                                                isSubmittingLesson ||
+                                                !canCompleteActiveLesson
+                                            "
+                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                             :class="
                                                 completedIds.includes(
                                                     activeLesson.id,
                                                 )
                                                     ? 'bg-slate-700 hover:bg-slate-600'
-                                                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/25'
+                                                    : !canCompleteActiveLesson
+                                                      ? 'bg-amber-600/70 hover:bg-amber-600/70'
+                                                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/25'
                                             "
                                         >
-                                            <CheckCircle2 class="w-4 h-4" />
+                                            <Loader2
+                                                v-if="isSubmittingLesson"
+                                                class="w-4 h-4 animate-spin"
+                                            />
+                                            <Lock
+                                                v-else-if="!canCompleteActiveLesson"
+                                                class="w-4 h-4"
+                                            />
+                                            <CheckCircle2
+                                                v-else
+                                                class="w-4 h-4"
+                                            />
                                             <span>{{
                                                 completedIds.includes(
                                                     activeLesson.id,
                                                 )
                                                     ? "Sudah Selesai (Lanjut Materi)"
-                                                    : "Tandai Selesai & Lanjut"
+                                                    : !canCompleteActiveLesson
+                                                      ? "Baca Hingga Slide Terakhir Untuk Selesai"
+                                                      : "Tandai Selesai & Lanjut"
                                             }}</span>
                                         </button>
 
@@ -2601,9 +2725,10 @@ const getYoutubeEmbedUrl = (url) => {
                                             "
                                             @click="submitCompleteCourse"
                                             :disabled="isAttending"
-                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse cursor-pointer"
+                                            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse cursor-pointer disabled:opacity-50"
                                         >
-                                            <Award class="w-4 h-4" />
+                                            <Loader2 v-if="isAttending" class="w-4 h-4 animate-spin" />
+                                            <Award v-else class="w-4 h-4" />
                                             <span>{{
                                                 isAttending
                                                     ? "Memproses..."

@@ -180,7 +180,10 @@ const triggerPejabatUpload = (idx) => {
     input.click();
 };
 
+const isSubmitting = ref(false);
+
 const submit = () => {
+    isSubmitting.value = true;
     // Send as POST with method spoofing for file uploads
     router.post(
         "/admin/profil",
@@ -199,6 +202,9 @@ const submit = () => {
         },
         {
             forceFormData: true,
+            onFinish: () => {
+                isSubmitting.value = false;
+            },
         },
     );
 };
@@ -237,11 +243,11 @@ const sections = [
                 </div>
                 <Button
                     @click="submit"
-                    :disabled="form.processing"
+                    :loading="isSubmitting"
                     class="w-fit bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
                 >
-                    <Save class="w-4 h-4 mr-1.5" />
-                    {{ form.processing ? "Menyimpan..." : "Simpan Perubahan" }}
+                    <Save v-if="!isSubmitting" class="w-4 h-4 mr-1.5" />
+                    {{ isSubmitting ? "Menyimpan..." : "Simpan Perubahan" }}
                 </Button>
             </div>
 

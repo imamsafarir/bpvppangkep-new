@@ -46,6 +46,7 @@ import {
     RotateCcw,
     QrCode,
     Type,
+    Loader2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -887,14 +888,19 @@ const submitModule = () => {
     }
 };
 
+const deletingModuleId = ref(null);
 const deleteModule = (module) => {
     if (
         confirm(
             `Hapus Unit Kompetensi "${module.title}" beserta seluruh Elemen Kompetensinya?`,
         )
     ) {
+        deletingModuleId.value = module.id;
         router.delete(`/admin/lms/modules/${module.id}`, {
             preserveScroll: true,
+            onFinish: () => {
+                deletingModuleId.value = null;
+            },
         });
     }
 };
@@ -903,6 +909,7 @@ const deleteModule = (module) => {
 const showLessonModal = ref(false);
 const isEditingLesson = ref(false);
 const currentLessonId = ref(null);
+const currentLessonMediaPath = ref(null);
 
 const lessonForm = useForm({
     module_id: "",
@@ -917,6 +924,7 @@ const lessonForm = useForm({
 const openAddLessonModal = (moduleId) => {
     isEditingLesson.value = false;
     currentLessonId.value = null;
+    currentLessonMediaPath.value = null;
     lessonForm.reset();
     lessonForm.module_id = moduleId;
     lessonForm.content_type = "article";
@@ -927,6 +935,7 @@ const openAddLessonModal = (moduleId) => {
 const openEditLessonModal = (lesson) => {
     isEditingLesson.value = true;
     currentLessonId.value = lesson.id;
+    currentLessonMediaPath.value = lesson.media_path || null;
     lessonForm.module_id = lesson.module_id;
     lessonForm.title = lesson.title;
     lessonForm.content_type = lesson.content_type;
@@ -953,10 +962,15 @@ const submitLesson = () => {
     }
 };
 
+const deletingLessonId = ref(null);
 const deleteLesson = (lesson) => {
     if (confirm(`Hapus Elemen Kompetensi "${lesson.title}"?`)) {
+        deletingLessonId.value = lesson.id;
         router.delete(`/admin/lms/lessons/${lesson.id}`, {
             preserveScroll: true,
+            onFinish: () => {
+                deletingLessonId.value = null;
+            },
         });
     }
 };
@@ -1050,15 +1064,20 @@ const submitQuizForm = () => {
     });
 };
 
+const deletingQuizId = ref(null);
 const deleteQuiz = (quiz) => {
     if (!quiz) return;
     if (!confirm(`Hapus kuis "${quiz.title}" dari Unit Kompetensi ini?`))
         return;
+    deletingQuizId.value = quiz.id;
     router.delete(`/admin/lms/quizzes/${quiz.id}`, {
         preserveScroll: true,
         onSuccess: () => {
             showQuizModal.value = false;
             activeQuiz.value = null;
+        },
+        onFinish: () => {
+            deletingQuizId.value = null;
         },
     });
 };
@@ -1159,10 +1178,12 @@ const submitQuestionForm = () => {
     }
 };
 
+const deletingQuestionId = ref(null);
 const deleteQuestion = (question) => {
     if (!confirm("Hapus butir soal kuis ini?")) return;
     const targetQuizId =
         activeQuiz.value?.id || activeQuizModule.value?.quiz?.id;
+    deletingQuestionId.value = question.id;
     router.delete(`/admin/lms/quiz-questions/${question.id}`, {
         preserveScroll: true,
         onSuccess: () => {
@@ -1178,6 +1199,9 @@ const deleteQuestion = (question) => {
                         ) || updated.quiz;
                 }
             }
+        },
+        onFinish: () => {
+            deletingQuestionId.value = null;
         },
     });
 };
@@ -1221,12 +1245,14 @@ const submitImport = () => {
     });
 };
 
+const deletingEnrollmentId = ref(null);
 const deleteEnrollment = (enrollment) => {
     if (
         confirm(
             `Keluarkan peserta "${enrollment.participant?.name}" dari kelas ini?`,
         )
     ) {
+        deletingEnrollmentId.value = enrollment.id;
         router.delete(
             `/admin/lms/${props.course.id}/enrollments/${enrollment.id}`,
             {
@@ -1236,6 +1262,9 @@ const deleteEnrollment = (enrollment) => {
                         selectedEnrollmentIds.value.filter(
                             (id) => id !== enrollment.id,
                         );
+                },
+                onFinish: () => {
+                    deletingEnrollmentId.value = null;
                 },
             },
         );
@@ -1980,16 +2009,23 @@ const warningCount = computed(() => {
         .length;
 });
 
+const markingAttendanceEnrollmentId = ref(null);
 const markManualAttendance = (enrollment, path = "live_zoom") => {
     if (
         confirm(
             `Tandai peserta "${enrollment.participant?.name}" sebagai SUDAH HADIR (${path === "live_zoom" ? "Online Meeting Live" : "Belajar Mandiri"}) dan terbitkan sertifikat?`,
         )
     ) {
+        markingAttendanceEnrollmentId.value = `${enrollment.id}_${path}`;
         router.post(
             `/admin/lms/${props.course.id}/enrollments/${enrollment.id}/manual-attendance`,
             { attendance_path: path },
-            { preserveScroll: true },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    markingAttendanceEnrollmentId.value = null;
+                },
+            },
         );
     }
 };
@@ -2938,10 +2974,15 @@ const uploadTemplateImage = (e) => {
                                 <button
                                     type="button"
                                     @click="deleteModule(mod)"
-                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition"
+                                    :disabled="deletingModuleId === mod.id"
+                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition disabled:opacity-50"
                                     title="Hapus Unit Kompetensi"
                                 >
-                                    <Trash2 class="w-4 h-4" />
+                                    <Loader2
+                                        v-if="deletingModuleId === mod.id"
+                                        class="w-4 h-4 animate-spin text-rose-600"
+                                    />
+                                    <Trash2 v-else class="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -3900,6 +3941,9 @@ const uploadTemplateImage = (e) => {
                                                 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400':
                                                     lesson.content_type ===
                                                     'image',
+                                                'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400':
+                                                    lesson.content_type ===
+                                                    'pdf',
                                             }"
                                         >
                                             <Video
@@ -3917,6 +3961,13 @@ const uploadTemplateImage = (e) => {
                                                 class="w-3.5 h-3.5"
                                             />
                                             <ImageIcon
+                                                v-else-if="
+                                                    lesson.content_type ===
+                                                    'image'
+                                                "
+                                                class="w-3.5 h-3.5"
+                                            />
+                                            <BookOpen
                                                 v-else
                                                 class="w-3.5 h-3.5"
                                             />
@@ -3941,7 +3992,10 @@ const uploadTemplateImage = (e) => {
                                                         : lesson.content_type ===
                                                             "video"
                                                           ? "Video"
-                                                          : "Gambar"
+                                                          : lesson.content_type ===
+                                                              "pdf"
+                                                            ? "Dokumen PDF / Slide"
+                                                            : "Gambar"
                                                 }}
                                             </span>
                                         </div>
@@ -3959,10 +4013,15 @@ const uploadTemplateImage = (e) => {
                                         <button
                                             type="button"
                                             @click="deleteLesson(lesson)"
-                                            class="p-1 text-slate-300 hover:text-rose-600 rounded"
+                                            :disabled="deletingLessonId === lesson.id"
+                                            class="p-1 text-slate-300 hover:text-rose-600 rounded disabled:opacity-50"
                                             title="Hapus Elemen Kompetensi"
                                         >
-                                            <Trash2 class="w-3.5 h-3.5" />
+                                            <Loader2
+                                                v-if="deletingLessonId === lesson.id"
+                                                class="w-3.5 h-3.5 animate-spin text-rose-600"
+                                            />
+                                            <Trash2 v-else class="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
@@ -4077,10 +4136,15 @@ const uploadTemplateImage = (e) => {
                                         <button
                                             type="button"
                                             @click="deleteQuiz(qz)"
-                                            class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition"
+                                            :disabled="deletingQuizId === qz.id"
+                                            class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition disabled:opacity-50"
                                             title="Hapus Kuis Ini"
                                         >
-                                            <Trash2 class="w-4 h-4" />
+                                            <Loader2
+                                                v-if="deletingQuizId === qz.id"
+                                                class="w-4 h-4 animate-spin text-rose-600"
+                                            />
+                                            <Trash2 v-else class="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
@@ -4384,7 +4448,11 @@ const uploadTemplateImage = (e) => {
                                 :disabled="isBulkDeleting"
                                 class="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition disabled:opacity-50"
                             >
-                                <Trash2 class="w-3.5 h-3.5" />
+                                <Loader2
+                                    v-if="isBulkDeleting"
+                                    class="w-3.5 h-3.5 animate-spin"
+                                />
+                                <Trash2 v-else class="w-3.5 h-3.5" />
                                 {{
                                     isBulkDeleting
                                         ? "Menghapus..."
@@ -4814,10 +4882,15 @@ const uploadTemplateImage = (e) => {
                                                             'live_zoom',
                                                         )
                                                     "
-                                                    class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 rounded text-[10px] font-bold whitespace-nowrap"
+                                                    :disabled="markingAttendanceEnrollmentId === `${e.id}_live_zoom`"
+                                                    class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 rounded text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1 disabled:opacity-50"
                                                     title="Tandai Hadir Online Meeting & Terbitkan Sertifikat"
                                                 >
-                                                    + Hadir Online Meeting
+                                                    <Loader2
+                                                        v-if="markingAttendanceEnrollmentId === `${e.id}_live_zoom`"
+                                                        class="w-3 h-3 animate-spin shrink-0"
+                                                    />
+                                                    <span>+ Hadir Online Meeting</span>
                                                 </button>
                                                 <button
                                                     @click="
@@ -4826,10 +4899,15 @@ const uploadTemplateImage = (e) => {
                                                             'self_study',
                                                         )
                                                     "
-                                                    class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded text-[10px] font-bold whitespace-nowrap"
+                                                    :disabled="markingAttendanceEnrollmentId === `${e.id}_self_study`"
+                                                    class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1 disabled:opacity-50"
                                                     title="Tandai Lulus Mandiri & Terbitkan Sertifikat"
                                                 >
-                                                    + Lulus Mandiri
+                                                    <Loader2
+                                                        v-if="markingAttendanceEnrollmentId === `${e.id}_self_study`"
+                                                        class="w-3 h-3 animate-spin shrink-0"
+                                                    />
+                                                    <span>+ Lulus Mandiri</span>
                                                 </button>
                                             </div>
                                             <span
@@ -4847,10 +4925,15 @@ const uploadTemplateImage = (e) => {
                                             </button>
                                             <button
                                                 @click="deleteEnrollment(e)"
-                                                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-md transition"
+                                                :disabled="deletingEnrollmentId === e.id"
+                                                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-md transition disabled:opacity-50"
                                                 title="Keluarkan Peserta"
                                             >
-                                                <Trash2 class="w-3.5 h-3.5" />
+                                                <Loader2
+                                                    v-if="deletingEnrollmentId === e.id"
+                                                    class="w-3.5 h-3.5 animate-spin text-rose-600"
+                                                />
+                                                <Trash2 v-else class="w-3.5 h-3.5" />
                                             </button>
                                         </div>
                                     </td>
@@ -5033,7 +5116,8 @@ const uploadTemplateImage = (e) => {
                             title="Simpan otomatis tata letak dan buka preview PDF sertifikat"
                             class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                         >
-                            <Eye class="w-4 h-4" />
+                            <Loader2 v-if="isSavingCert" class="w-4 h-4 animate-spin shrink-0" />
+                            <Eye v-else class="w-4 h-4" />
                             <span>{{
                                 isSavingCert
                                     ? "Menyinkronkan..."
@@ -5044,9 +5128,10 @@ const uploadTemplateImage = (e) => {
                         <button
                             @click="saveCertificateConfig"
                             :disabled="isSavingCert"
-                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                         >
-                            <Save class="w-4 h-4" />
+                            <Loader2 v-if="isSavingCert" class="w-4 h-4 animate-spin shrink-0" />
+                            <Save v-else class="w-4 h-4" />
                             <span>{{
                                 isSavingCert
                                     ? "Menyimpan..."
@@ -6764,9 +6849,10 @@ const uploadTemplateImage = (e) => {
                         <button
                             @click="saveCertificateConfig"
                             :disabled="isSavingCert"
-                            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/25 flex items-center justify-center gap-2 cursor-pointer"
+                            class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                            <Save class="w-4 h-4" />
+                            <Loader2 v-if="isSavingCert" class="w-4 h-4 animate-spin shrink-0" />
+                            <Save v-else class="w-4 h-4" />
                             <span>{{
                                 isSavingCert
                                     ? "Menyimpan Konfigurasi..."
@@ -7114,9 +7200,18 @@ const uploadTemplateImage = (e) => {
                         </button>
                         <button
                             type="submit"
-                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition"
+                            :disabled="moduleForm.processing"
+                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                         >
-                            Simpan Unit Kompetensi
+                            <Loader2
+                                v-if="moduleForm.processing"
+                                class="w-3.5 h-3.5 animate-spin"
+                            />
+                            <span>{{
+                                moduleForm.processing
+                                    ? "Menyimpan..."
+                                    : "Simpan Unit Kompetensi"
+                            }}</span>
                         </button>
                     </div>
                 </form>
@@ -7184,6 +7279,9 @@ const uploadTemplateImage = (e) => {
                                 </option>
                                 <option value="image">
                                     Gambar Kerja / Infografis
+                                </option>
+                                <option value="pdf">
+                                    Dokumen PDF / Slide Modul
                                 </option>
                             </select>
                         </div>
@@ -7255,6 +7353,45 @@ const uploadTemplateImage = (e) => {
                         />
                     </div>
 
+                    <!-- PDF Fields -->
+                    <div
+                        v-if="lessonForm.content_type === 'pdf'"
+                        class="space-y-3 p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/50 rounded-lg"
+                    >
+                        <div>
+                            <label
+                                class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1"
+                            >
+                                Upload File Dokumen PDF (.pdf)
+                            </label>
+                            <input
+                                type="file"
+                                accept=".pdf,application/pdf"
+                                @change="handleLessonMedia"
+                                class="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 dark:file:bg-amber-900/60 dark:file:text-amber-300"
+                            />
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                                Format wajib PDF (maks. 50MB). Materi ini akan disajikan ke siswa dalam mode pembaca mirip buku/slide presentasi dengan proteksi wajib tuntas membaca hingga halaman terakhir serta fitur Full Screen.
+                            </p>
+                            <div
+                                v-if="currentLessonMediaPath && isEditingLesson"
+                                class="mt-2 p-2 bg-white dark:bg-slate-900 rounded border border-amber-200 dark:border-amber-800 text-xs flex items-center justify-between"
+                            >
+                                <span class="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate">
+                                    <FileText class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                    <span class="truncate">File PDF saat ini tersimpan di server</span>
+                                </span>
+                                <a
+                                    :href="'/storage/' + currentLessonMediaPath"
+                                    target="_blank"
+                                    class="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 rounded font-semibold text-[11px] shrink-0 hover:underline"
+                                >
+                                    Buka Dokumen &nearr;
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Article / Text Fields -->
                     <div>
                         <label
@@ -7280,9 +7417,18 @@ const uploadTemplateImage = (e) => {
                         </button>
                         <button
                             type="submit"
-                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition"
+                            :disabled="lessonForm.processing"
+                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                         >
-                            Simpan Elemen Kompetensi
+                            <Loader2
+                                v-if="lessonForm.processing"
+                                class="w-3.5 h-3.5 animate-spin"
+                            />
+                            <span>{{
+                                lessonForm.processing
+                                    ? "Menyimpan..."
+                                    : "Simpan Elemen Kompetensi"
+                            }}</span>
                         </button>
                     </div>
                 </form>
@@ -7406,9 +7552,18 @@ const uploadTemplateImage = (e) => {
                         </button>
                         <button
                             type="submit"
-                            class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"
+                            :disabled="participantForm.processing"
+                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                         >
-                            Daftarkan
+                            <Loader2
+                                v-if="participantForm.processing"
+                                class="w-3.5 h-3.5 animate-spin"
+                            />
+                            <span>{{
+                                participantForm.processing
+                                    ? "Mendaftarkan..."
+                                    : "Daftarkan"
+                            }}</span>
                         </button>
                     </div>
                 </form>
@@ -7695,13 +7850,17 @@ const uploadTemplateImage = (e) => {
                         <button
                             type="submit"
                             :disabled="editParticipantForm.processing"
-                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
+                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                         >
-                            {{
+                            <Loader2
+                                v-if="editParticipantForm.processing"
+                                class="w-3.5 h-3.5 animate-spin"
+                            />
+                            <span>{{
                                 editParticipantForm.processing
                                     ? "Menyimpan..."
                                     : "Simpan Perubahan"
-                            }}
+                            }}</span>
                         </button>
                     </div>
                 </form>
@@ -7770,9 +7929,18 @@ const uploadTemplateImage = (e) => {
                         </button>
                         <button
                             type="submit"
-                            class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold"
+                            :disabled="importForm.processing || !importForm.file"
+                            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                         >
-                            Mulai Import
+                            <Loader2
+                                v-if="importForm.processing"
+                                class="w-3.5 h-3.5 animate-spin"
+                            />
+                            <span>{{
+                                importForm.processing
+                                    ? "Mengimpor..."
+                                    : "Mulai Import"
+                            }}</span>
                         </button>
                     </div>
                 </form>
@@ -7881,6 +8049,10 @@ const uploadTemplateImage = (e) => {
                             "
                             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                         >
+                            <Loader2
+                                v-if="curriculumImportForm.processing"
+                                class="w-3.5 h-3.5 animate-spin"
+                            />
                             <span>{{
                                 curriculumImportForm.processing
                                     ? "Mengunggah & Memproses..."
@@ -8021,31 +8193,40 @@ const uploadTemplateImage = (e) => {
                                 <button
                                     v-if="activeQuiz || activeQuizModule?.quiz"
                                     type="button"
+                                    :disabled="deletingQuizId === (activeQuiz?.id || activeQuizModule?.quiz?.id)"
                                     @click="
                                         deleteQuiz(
                                             activeQuiz ||
                                                 activeQuizModule?.quiz,
                                         )
                                     "
-                                    class="text-xs font-semibold text-rose-600 hover:text-rose-700 underline"
+                                    class="text-xs font-semibold text-rose-600 hover:text-rose-700 underline inline-flex items-center gap-1 disabled:opacity-50"
                                 >
-                                    Hapus Kuis Ini
+                                    <Loader2
+                                        v-if="deletingQuizId === (activeQuiz?.id || activeQuizModule?.quiz?.id)"
+                                        class="w-3.5 h-3.5 animate-spin"
+                                    />
+                                    <span>Hapus Kuis Ini</span>
                                 </button>
                                 <div v-else></div>
 
                                 <button
                                     type="submit"
                                     :disabled="quizForm.processing"
-                                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
+                                    class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                                 >
-                                    {{
+                                    <Loader2
+                                        v-if="quizForm.processing"
+                                        class="w-3.5 h-3.5 animate-spin"
+                                    />
+                                    <span>{{
                                         quizForm.processing
                                             ? "Menyimpan..."
                                             : activeQuiz ||
                                                 activeQuizModule?.quiz
                                               ? "Simpan Pengaturan Kuis"
                                               : "Buat & Simpan Kuis Baru"
-                                    }}
+                                    }}</span>
                                 </button>
                             </div>
                         </form>
@@ -8118,10 +8299,15 @@ const uploadTemplateImage = (e) => {
                                         <button
                                             type="button"
                                             @click="deleteQuestion(q)"
-                                            class="p-1 text-slate-400 hover:text-rose-600 rounded"
+                                            :disabled="deletingQuestionId === q.id"
+                                            class="p-1 text-slate-400 hover:text-rose-600 rounded disabled:opacity-50"
                                             title="Hapus Soal"
                                         >
-                                            <Trash2 class="w-3.5 h-3.5" />
+                                            <Loader2
+                                                v-if="deletingQuestionId === q.id"
+                                                class="w-3.5 h-3.5 animate-spin text-rose-600"
+                                            />
+                                            <Trash2 v-else class="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
@@ -8301,15 +8487,19 @@ const uploadTemplateImage = (e) => {
                                     <button
                                         type="submit"
                                         :disabled="questionForm.processing"
-                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
+                                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                                     >
-                                        {{
+                                        <Loader2
+                                            v-if="questionForm.processing"
+                                            class="w-3.5 h-3.5 animate-spin"
+                                        />
+                                        <span>{{
                                             questionForm.processing
                                                 ? "Menyimpan..."
                                                 : isEditingQuestion
                                                   ? "Perbarui Butir Soal"
                                                   : "+ Simpan Butir Soal"
-                                        }}
+                                        }}</span>
                                     </button>
                                 </div>
                             </form>
@@ -8563,9 +8753,13 @@ const uploadTemplateImage = (e) => {
                                         <button
                                             type="submit"
                                             :disabled="durationForm.processing"
-                                            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
+                                            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-1.5"
                                         >
-                                            Simpan
+                                            <Loader2
+                                                v-if="durationForm.processing"
+                                                class="w-3.5 h-3.5 animate-spin"
+                                            />
+                                            <span>Simpan</span>
                                         </button>
                                         <button
                                             type="button"

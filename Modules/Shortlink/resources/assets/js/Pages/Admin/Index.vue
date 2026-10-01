@@ -163,6 +163,10 @@ const sortDir = ref(props.filters?.sort_dir || "desc");
 
 // Selected shortlinks
 const selectedShortlinkIds = ref([]);
+const isBulkShortlinksProcessing = ref(false);
+const togglingId = ref(null);
+const deletingShortlinkId = ref(null);
+
 const isAllShortlinksSelected = computed(() => {
     const list = props.shortlinks?.data || [];
     return list.length > 0 && selectedShortlinkIds.value.length === list.length;
@@ -198,6 +202,7 @@ const bulkShortlinksAction = (action) => {
             return;
     }
 
+    isBulkShortlinksProcessing.value = true;
     router.post(
         "/admin/shortlinks/bulk",
         {
@@ -208,6 +213,9 @@ const bulkShortlinksAction = (action) => {
             preserveScroll: true,
             onSuccess: () => {
                 selectedShortlinkIds.value = [];
+            },
+            onFinish: () => {
+                isBulkShortlinksProcessing.value = false;
             },
         },
     );
@@ -320,10 +328,16 @@ const toggleField = (field) => {
 };
 
 const toggleActive = (item) => {
+    togglingId.value = item.id;
     router.patch(
         `/admin/shortlinks/${item.id}/toggle`,
         {},
-        { preserveScroll: true },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                togglingId.value = null;
+            },
+        },
     );
 };
 
@@ -334,7 +348,13 @@ const deleteShortlink = (item) => {
         )
     )
         return;
-    router.delete(`/admin/shortlinks/${item.id}`, { preserveScroll: true });
+    deletingShortlinkId.value = item.id;
+    router.delete(`/admin/shortlinks/${item.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            deletingShortlinkId.value = null;
+        },
+    });
 };
 
 // --- QR CODE GENERATION & DOWNLOAD ---
@@ -471,6 +491,8 @@ const submitImport = () => {
 const leadSearchQuery = ref(props.filters?.lead_search || "");
 const leadShortlinkFilter = ref(props.filters?.lead_shortlink_id || "");
 const selectedLeadIds = ref([]);
+const isBulkLeadsProcessing = ref(false);
+const deletingLeadId = ref(null);
 
 const isAllLeadsSelected = computed(() => {
     const list = props.leads?.data || [];
@@ -506,6 +528,7 @@ const bulkLeadsAction = (action) => {
             return;
     }
 
+    isBulkLeadsProcessing.value = true;
     router.post(
         "/admin/shortlinks/leads/bulk",
         {
@@ -516,6 +539,9 @@ const bulkLeadsAction = (action) => {
             preserveScroll: true,
             onSuccess: () => {
                 selectedLeadIds.value = [];
+            },
+            onFinish: () => {
+                isBulkLeadsProcessing.value = false;
             },
         },
     );
@@ -542,8 +568,12 @@ const filterLeadsByShortlink = (shortlinkId) => {
 
 const deleteLead = (lead) => {
     if (!confirm(`Hapus lead dari "${lead.nama || "Pengunjung"}"?`)) return;
+    deletingLeadId.value = lead.id;
     router.delete(`/admin/shortlinks/leads/${lead.id}`, {
         preserveScroll: true,
+        onFinish: () => {
+            deletingLeadId.value = null;
+        },
     });
 };
 
@@ -1074,6 +1104,7 @@ function doGet(e) {
                         <Button
                             variant="outline"
                             size="sm"
+                            :disabled="isBulkShortlinksProcessing"
                             @click="bulkShortlinksAction('activate')"
                             class="h-8 text-xs bg-white text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                         >
@@ -1082,6 +1113,7 @@ function doGet(e) {
                         <Button
                             variant="outline"
                             size="sm"
+                            :disabled="isBulkShortlinksProcessing"
                             @click="bulkShortlinksAction('deactivate')"
                             class="h-8 text-xs bg-white text-amber-700 border-amber-200 hover:bg-amber-50"
                         >
@@ -1090,6 +1122,7 @@ function doGet(e) {
                         <Button
                             variant="outline"
                             size="sm"
+                            :disabled="isBulkShortlinksProcessing"
                             @click="exportSelectedShortlinks"
                             class="h-8 text-xs bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50"
                         >
@@ -1099,15 +1132,17 @@ function doGet(e) {
                         <Button
                             variant="outline"
                             size="sm"
+                            :loading="isBulkShortlinksProcessing"
                             @click="bulkShortlinksAction('delete')"
                             class="h-8 text-xs bg-white text-rose-700 border-rose-200 hover:bg-rose-50"
                         >
-                            <Trash2 class="w-3 h-3 mr-1" />
+                            <Trash2 v-if="!isBulkShortlinksProcessing" class="w-3 h-3 mr-1" />
                             Hapus
                         </Button>
                         <Button
                             variant="ghost"
                             size="sm"
+                            :disabled="isBulkShortlinksProcessing"
                             @click="selectedShortlinkIds = []"
                             class="h-8 text-xs text-zinc-600 hover:text-zinc-900"
                         >
@@ -1412,8 +1447,9 @@ function doGet(e) {
                                     <TableCell class="text-center">
                                         <button
                                             type="button"
+                                            :disabled="togglingId === item.id"
                                             @click="toggleActive(item)"
-                                            class="cursor-pointer transition-opacity hover:opacity-80"
+                                            class="cursor-pointer transition-opacity hover:opacity-80 disabled:opacity-50"
                                             :title="
                                                 item.is_active
                                                     ? 'Klik untuk nonaktifkan'
@@ -1426,8 +1462,12 @@ function doGet(e) {
                                                         ? 'success'
                                                         : 'secondary'
                                                 "
-                                                class="text-[10px] cursor-pointer"
+                                                class="text-[10px] cursor-pointer inline-flex items-center gap-1"
                                             >
+                                                <Loader2
+                                                    v-if="togglingId === item.id"
+                                                    class="w-2.5 h-2.5 animate-spin"
+                                                />
                                                 {{
                                                     item.is_active
                                                         ? "Aktif"
@@ -1466,11 +1506,16 @@ function doGet(e) {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
+                                                :disabled="deletingShortlinkId === item.id"
                                                 @click="deleteShortlink(item)"
                                                 class="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
                                                 title="Hapus shortlink"
                                             >
-                                                <Trash2 class="w-3.5 h-3.5" />
+                                                <Loader2
+                                                    v-if="deletingShortlinkId === item.id"
+                                                    class="w-3.5 h-3.5 animate-spin"
+                                                />
+                                                <Trash2 v-else class="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -1559,15 +1604,17 @@ function doGet(e) {
                         <Button
                             variant="outline"
                             size="sm"
+                            :loading="isBulkLeadsProcessing"
                             @click="bulkLeadsAction('delete')"
                             class="h-8 text-xs bg-white text-rose-700 border-rose-200 hover:bg-rose-50 cursor-pointer"
                         >
-                            <Trash2 class="w-3 h-3 mr-1" />
+                            <Trash2 v-if="!isBulkLeadsProcessing" class="w-3 h-3 mr-1" />
                             Hapus Terpilih
                         </Button>
                         <Button
                             variant="ghost"
                             size="sm"
+                            :disabled="isBulkLeadsProcessing"
                             @click="selectedLeadIds = []"
                             class="h-8 text-xs text-zinc-600 hover:text-zinc-900 cursor-pointer"
                         >
@@ -1756,11 +1803,16 @@ function doGet(e) {
                                         <Button
                                             variant="ghost"
                                             size="sm"
+                                            :disabled="deletingLeadId === lead.id"
                                             @click="deleteLead(lead)"
                                             class="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
                                             title="Hapus lead"
                                         >
-                                            <Trash2 class="w-3.5 h-3.5" />
+                                            <Loader2
+                                                v-if="deletingLeadId === lead.id"
+                                                class="w-3.5 h-3.5 animate-spin"
+                                            />
+                                            <Trash2 v-else class="w-3.5 h-3.5" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -2494,7 +2546,7 @@ function doGet(e) {
                         </Button>
                         <Button
                             type="submit"
-                            :disabled="form.processing"
+                            :loading="form.processing"
                             class="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                         >
                             {{
@@ -2669,9 +2721,8 @@ function doGet(e) {
                         </Button>
                         <Button
                             type="submit"
-                            :disabled="
-                                !importForm.file || importForm.processing
-                            "
+                            :disabled="!importForm.file"
+                            :loading="importForm.processing"
                             class="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                         >
                             {{

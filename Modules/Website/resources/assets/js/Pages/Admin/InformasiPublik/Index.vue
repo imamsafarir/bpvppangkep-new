@@ -35,6 +35,7 @@ import {
     Link as LinkIcon,
     X,
     Search,
+    Loader2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -48,6 +49,10 @@ const editItem = ref(null);
 const fileInputRef = ref(null);
 const selectedFile = ref(null);
 const uploadMode = ref("file"); // 'file' or 'url'
+
+// Loading states
+const isSubmitting = ref(false);
+const deletingId = ref(null);
 
 const searchQuery = ref(props.filters?.search || "");
 const filterKategori = ref(props.filters?.kategori || "Semua");
@@ -140,6 +145,7 @@ const closeDialog = () => {
 };
 
 const submit = () => {
+    isSubmitting.value = true;
     if (editItem.value) {
         router.post(
             `/admin/informasi-publik/${editItem.value.id}`,
@@ -153,6 +159,9 @@ const submit = () => {
             {
                 forceFormData: true,
                 onSuccess: () => closeDialog(),
+                onFinish: () => {
+                    isSubmitting.value = false;
+                },
             },
         );
     } else {
@@ -167,14 +176,24 @@ const submit = () => {
             {
                 forceFormData: true,
                 onSuccess: () => closeDialog(),
+                onFinish: () => {
+                    isSubmitting.value = false;
+                },
             },
         );
     }
 };
 
 const deleteItem = (item) => {
+    if (deletingId.value) return;
     if (!confirm(`Hapus dokumen "${item.nama_dokumen}"?`)) return;
-    router.delete(`/admin/informasi-publik/${item.id}`);
+    deletingId.value = item.id;
+    router.delete(`/admin/informasi-publik/${item.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            deletingId.value = null;
+        },
+    });
 };
 
 const selectKategori = (k) => {
@@ -404,10 +423,11 @@ const selectKategori = (k) => {
                                             variant="ghost"
                                             size="sm"
                                             @click="deleteItem(item)"
+                                            :loading="deletingId === item.id"
                                             class="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                                         >
-                                            <Trash2 class="w-3.5 h-3.5 mr-1" />
-                                            Hapus
+                                            <Trash2 v-if="deletingId !== item.id" class="w-3.5 h-3.5 mr-1" />
+                                            {{ deletingId === item.id ? "Menghapus..." : "Hapus" }}
                                         </Button>
                                     </div>
                                 </TableCell>
@@ -643,12 +663,12 @@ const selectKategori = (k) => {
                         <Button
                             type="submit"
                             class="bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
-                            :disabled="form.processing"
+                            :loading="isSubmitting"
                         >
                             {{
-                                form.processing
+                                isSubmitting
                                     ? "Menyimpan..."
-                                    : "Simpan Dokumen"
+                                    : (editItem ? "Perbarui Dokumen" : "Simpan Dokumen")
                             }}
                         </Button>
                     </DialogFooter>

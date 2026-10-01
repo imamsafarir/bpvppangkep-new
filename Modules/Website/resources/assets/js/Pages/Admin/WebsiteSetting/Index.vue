@@ -253,10 +253,10 @@ const submit = () => {
                 </div>
                 <Button
                     @click="submit"
-                    :disabled="form.processing"
+                    :loading="form.processing"
                     class="w-fit bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
                 >
-                    <Save class="w-4 h-4 mr-1.5" />
+                    <Save v-if="!form.processing" class="w-4 h-4 mr-1.5" />
                     {{ form.processing ? "Menyimpan..." : "Simpan Pengaturan" }}
                 </Button>
             </div>

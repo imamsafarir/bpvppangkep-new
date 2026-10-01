@@ -43,6 +43,7 @@ import {
     ZoomIn,
     ChevronDown,
     ChevronUp,
+    Loader2,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -55,6 +56,12 @@ const activeTab = ref("berita");
 const isDialogOpen = ref(false);
 const editItem = ref(null);
 const previewImage = ref(null);
+
+// Loading states
+const isSubmitting = ref(false);
+const isBulkDeletingBerita = ref(false);
+const isBulkDeletingGaleri = ref(false);
+const deletingId = ref(null);
 
 // Search, Sort & Per-Page filters
 const searchBerita = ref(props.filters?.search_berita || "");
@@ -219,7 +226,7 @@ const toggleSelectBerita = (id) => {
 };
 
 const bulkDeleteBerita = () => {
-    if (!selectedBeritaIds.value.length) return;
+    if (!selectedBeritaIds.value.length || isBulkDeletingBerita.value) return;
     if (
         !confirm(
             `Apakah Anda yakin ingin menghapus ${selectedBeritaIds.value.length} berita terpilih?`,
@@ -228,6 +235,7 @@ const bulkDeleteBerita = () => {
         return;
     }
 
+    isBulkDeletingBerita.value = true;
     router.post(
         "/admin/berita/bulk-delete",
         { ids: selectedBeritaIds.value },
@@ -235,6 +243,9 @@ const bulkDeleteBerita = () => {
             preserveScroll: true,
             onSuccess: () => {
                 selectedBeritaIds.value = [];
+            },
+            onFinish: () => {
+                isBulkDeletingBerita.value = false;
             },
         },
     );
@@ -270,7 +281,7 @@ const toggleSelectGaleri = (id) => {
 };
 
 const bulkDeleteGaleri = () => {
-    if (!selectedGaleriIds.value.length) return;
+    if (!selectedGaleriIds.value.length || isBulkDeletingGaleri.value) return;
     if (
         !confirm(
             `Apakah Anda yakin ingin menghapus ${selectedGaleriIds.value.length} foto galeri terpilih?`,
@@ -279,6 +290,7 @@ const bulkDeleteGaleri = () => {
         return;
     }
 
+    isBulkDeletingGaleri.value = true;
     router.post(
         "/admin/berita/bulk-delete",
         { ids: selectedGaleriIds.value },
@@ -286,6 +298,9 @@ const bulkDeleteGaleri = () => {
             preserveScroll: true,
             onSuccess: () => {
                 selectedGaleriIds.value = [];
+            },
+            onFinish: () => {
+                isBulkDeletingGaleri.value = false;
             },
         },
     );
@@ -366,6 +381,7 @@ const removeSelectedFile = () => {
 };
 
 const submit = () => {
+    isSubmitting.value = true;
     if (editItem.value) {
         // Send as POST with _method spoofing for PHP file upload support
         router.post(
@@ -382,20 +398,33 @@ const submit = () => {
             {
                 forceFormData: true,
                 onSuccess: () => closeDialog(),
+                onFinish: () => {
+                    isSubmitting.value = false;
+                },
             },
         );
     } else {
         form.post("/admin/berita", {
             forceFormData: true,
             onSuccess: () => closeDialog(),
+            onFinish: () => {
+                isSubmitting.value = false;
+            },
         });
     }
 };
 
 const deleteItem = (item) => {
+    if (deletingId.value) return;
     if (!confirm(`Hapus "${item.judul_berita || item.keterangan_galeri}"?`))
         return;
-    router.delete(`/admin/berita/${item.id}`);
+    deletingId.value = item.id;
+    router.delete(`/admin/berita/${item.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            deletingId.value = null;
+        },
+    });
 };
 
 const getImageUrl = (val) => {
@@ -582,10 +611,11 @@ const getImageUrl = (val) => {
                             variant="destructive"
                             size="sm"
                             @click="bulkDeleteBerita"
+                            :loading="isBulkDeletingBerita"
                             class="h-8 px-3 text-xs gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-700 text-white"
                         >
-                            <Trash2 class="w-3.5 h-3.5" />
-                            <span>Hapus Terpilih</span>
+                            <Trash2 v-if="!isBulkDeletingBerita" class="w-3.5 h-3.5" />
+                            <span>{{ isBulkDeletingBerita ? "Menghapus..." : "Hapus Terpilih" }}</span>
                         </Button>
                     </div>
                 </div>
@@ -857,12 +887,14 @@ const getImageUrl = (val) => {
                                                 variant="ghost"
                                                 size="sm"
                                                 @click="deleteItem(item)"
+                                                :loading="deletingId === item.id"
                                                 class="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                                             >
                                                 <Trash2
+                                                    v-if="deletingId !== item.id"
                                                     class="w-3.5 h-3.5 mr-1"
                                                 />
-                                                Hapus
+                                                {{ deletingId === item.id ? "Menghapus..." : "Hapus" }}
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -985,10 +1017,11 @@ const getImageUrl = (val) => {
                             variant="destructive"
                             size="sm"
                             @click="bulkDeleteGaleri"
+                            :loading="isBulkDeletingGaleri"
                             class="h-8 px-3 text-xs gap-1.5 shadow-xs bg-rose-600 hover:bg-rose-700 text-white"
                         >
-                            <Trash2 class="w-3.5 h-3.5" />
-                            <span>Hapus Terpilih</span>
+                            <Trash2 v-if="!isBulkDeletingGaleri" class="w-3.5 h-3.5" />
+                            <span>{{ isBulkDeletingGaleri ? "Menghapus..." : "Hapus Terpilih" }}</span>
                         </Button>
                     </div>
                 </div>
@@ -1150,12 +1183,14 @@ const getImageUrl = (val) => {
                                                 variant="ghost"
                                                 size="sm"
                                                 @click="deleteItem(item)"
+                                                :loading="deletingId === item.id"
                                                 class="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                                             >
                                                 <Trash2
+                                                    v-if="deletingId !== item.id"
                                                     class="w-3.5 h-3.5 mr-1"
                                                 />
-                                                Hapus
+                                                {{ deletingId === item.id ? "Menghapus..." : "Hapus" }}
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -1340,11 +1375,13 @@ const getImageUrl = (val) => {
                         >
                         <Button
                             type="submit"
-                            :disabled="form.processing"
+                            :loading="isSubmitting || form.processing"
                             class="bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {{
-                                form.processing ? "Menyimpan..." : "Simpan Data"
+                                (isSubmitting || form.processing)
+                                    ? "Menyimpan..."
+                                    : (editItem ? "Perbarui Data" : "Simpan Data")
                             }}
                         </Button>
                     </DialogFooter>

@@ -70,6 +70,7 @@ import {
     Key,
     ShieldCheck,
     Info,
+    Loader2,
 } from "lucide-vue-next";
 import { RichTextEditor } from "@/Components/ui/rich-text-editor";
 
@@ -434,6 +435,10 @@ const onSort = (column) => {
 // BULK ACTION (OPERASI MASSAL DAFTAR KONTEN)
 // ==========================================
 const selectedContentIds = ref([]);
+const isBulkProcessing = ref(false);
+const deletingContentId = ref(null);
+const togglingPlatformId = ref(null);
+
 const isAllSelected = computed(() => {
     const list = props.contents?.data || [];
     return list.length > 0 && selectedContentIds.value.length === list.length;
@@ -465,6 +470,7 @@ const executeBulk = (action) => {
     ) {
         return;
     }
+    isBulkProcessing.value = true;
     router.post(
         "/admin/sosmedhub/bulk",
         {
@@ -475,6 +481,9 @@ const executeBulk = (action) => {
             preserveScroll: true,
             onSuccess: () => {
                 selectedContentIds.value = [];
+            },
+            onFinish: () => {
+                isBulkProcessing.value = false;
             },
         },
     );
@@ -853,10 +862,14 @@ const submitComment = () => {
 // Hapus Konten
 const deleteContent = (content) => {
     if (confirm(`Hapus rencana konten "${content.nama_kegiatan}"?`)) {
+        deletingContentId.value = content.id;
         router.delete(`/admin/sosmedhub/${content.id}`, {
             preserveScroll: true,
             onSuccess: () => {
                 isDialogOpen.value = false;
+            },
+            onFinish: () => {
+                deletingContentId.value = null;
             },
         });
     }
@@ -864,10 +877,16 @@ const deleteContent = (content) => {
 
 // Toggle Platform di Tab Pengaturan
 const togglePlatformActive = (platform) => {
+    togglingPlatformId.value = platform.id;
     router.patch(
         `/admin/sosmedhub/platforms/${platform.id}/toggle`,
         {},
-        { preserveScroll: true },
+        {
+            preserveScroll: true,
+            onFinish: () => {
+                togglingPlatformId.value = null;
+            },
+        },
     );
 };
 
@@ -2154,6 +2173,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                         <Button
                             size="sm"
                             variant="outline"
+                            :disabled="isBulkProcessing"
                             @click="executeBulk('status_draft')"
                             class="h-8 text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
                         >
@@ -2162,6 +2182,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                         <Button
                             size="sm"
                             variant="outline"
+                            :disabled="isBulkProcessing"
                             @click="executeBulk('status_proses_editing')"
                             class="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-100"
                         >
@@ -2170,6 +2191,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                         <Button
                             size="sm"
                             variant="outline"
+                            :disabled="isBulkProcessing"
                             @click="executeBulk('status_review')"
                             class="h-8 text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
                         >
@@ -2178,6 +2200,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                         <Button
                             size="sm"
                             variant="outline"
+                            :disabled="isBulkProcessing"
                             @click="executeBulk('status_tayang')"
                             class="h-8 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-100"
                         >
@@ -2187,14 +2210,16 @@ const getCleanSnippet = (text, maxLength = 85) => {
                             v-if="isSuperAdmin"
                             size="sm"
                             variant="destructive"
+                            :loading="isBulkProcessing"
                             @click="executeBulk('delete')"
                             class="h-8 text-xs font-semibold gap-1"
                         >
-                            <Trash2 class="w-3.5 h-3.5" /> Hapus Terpilih
+                            <Trash2 v-if="!isBulkProcessing" class="w-3.5 h-3.5" /> Hapus Terpilih
                         </Button>
                         <button
+                            :disabled="isBulkProcessing"
                             @click="selectedContentIds = []"
-                            class="text-xs text-zinc-500 hover:text-zinc-800 underline ml-1 cursor-pointer"
+                            class="text-xs text-zinc-500 hover:text-zinc-800 underline ml-1 cursor-pointer disabled:opacity-50"
                         >
                             Batal
                         </button>
@@ -2606,11 +2631,16 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                                 v-if="isSuperAdmin"
                                                 size="sm"
                                                 variant="ghost"
+                                                :disabled="deletingContentId === item.id"
                                                 @click="deleteContent(item)"
                                                 class="h-8 w-8 p-0 text-zinc-400 hover:text-rose-600 hover:bg-rose-50"
                                                 title="Hapus Konten"
                                             >
-                                                <Trash2 class="w-3.5 h-3.5" />
+                                                <Loader2
+                                                    v-if="deletingContentId === item.id"
+                                                    class="w-3.5 h-3.5 animate-spin"
+                                                />
+                                                <Trash2 v-else class="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
                                     </TableCell>
@@ -3267,6 +3297,8 @@ const getCleanSnippet = (text, maxLength = 85) => {
                             <Button
                                 size="sm"
                                 :variant="p.is_active ? 'outline' : 'secondary'"
+                                :disabled="togglingPlatformId === p.id"
+                                :loading="togglingPlatformId === p.id"
                                 @click="togglePlatformActive(p)"
                                 class="h-8 px-3 text-xs font-semibold shrink-0 cursor-pointer"
                             >
@@ -3585,10 +3617,10 @@ const getCleanSnippet = (text, maxLength = 85) => {
 
                             <Button
                                 type="submit"
-                                :disabled="socialSettingForm.processing"
+                                :loading="socialSettingForm.processing"
                                 class="h-10 px-5 text-xs bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:opacity-95 text-white font-bold rounded-xl shadow-xs transition cursor-pointer shrink-0"
                             >
-                                <ShieldCheck class="w-4 h-4 mr-1.5" />
+                                <ShieldCheck v-if="!socialSettingForm.processing" class="w-4 h-4 mr-1.5" />
                                 {{
                                     socialSettingForm.processing
                                         ? "Menyimpan Kredensial..."
@@ -5326,6 +5358,8 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                                     <Button
                                                         type="button"
                                                         size="sm"
+                                                        :loading="revisionForm.processing"
+                                                        :disabled="!revisionForm.catatan.trim()"
                                                         @click="submitRevision"
                                                         class="h-8 text-xs bg-rose-600 hover:bg-rose-700 text-white shrink-0"
                                                     >
@@ -5670,10 +5704,16 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                             type="button"
                                             variant="ghost"
                                             size="sm"
+                                            :disabled="deletingContentId === editItem.id"
                                             @click="deleteContent(editItem)"
                                             class="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 cursor-pointer h-9 px-3 font-semibold gap-1.5 transition"
                                         >
+                                            <Loader2
+                                                v-if="deletingContentId === editItem.id"
+                                                class="w-3.5 h-3.5 animate-spin"
+                                            />
                                             <Trash2
+                                                v-else
                                                 class="w-3.5 h-3.5 text-rose-500"
                                             />
                                             <span>Hapus Konten</span>
@@ -5698,7 +5738,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                             v-if="shouldShowSaveButton"
                                             type="submit"
                                             size="sm"
-                                            :disabled="form.processing"
+                                            :loading="form.processing"
                                             class="text-xs h-9 px-4 font-bold cursor-pointer shadow-xs gap-1.5 transition"
                                             :class="[
                                                 editItem
@@ -5715,7 +5755,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                                         : 'text-white bg-blue-600 hover:bg-blue-700 shadow-xs',
                                             ]"
                                         >
-                                            <Check class="w-3.5 h-3.5" />
+                                            <Check v-if="!form.processing" class="w-3.5 h-3.5" />
                                             <span>{{
                                                 editItem
                                                     ? "Simpan Perubahan"
@@ -5734,12 +5774,12 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                                 "
                                                 type="button"
                                                 @click="kirimKeEditor"
-                                                :disabled="form.processing"
+                                                :loading="form.processing"
                                                 class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-xs gap-1.5 cursor-pointer transition ring-2 ring-blue-400/20"
                                                 title="Serahkan bahan dan brief ke tim editor"
                                             >
                                                 <span>Kirim ke Editor</span>
-                                                <ArrowRight class="w-4 h-4" />
+                                                <ArrowRight v-if="!form.processing" class="w-4 h-4" />
                                             </Button>
 
                                             <!-- 2. Tahap Editor: Kirim ke Admin Platform (Tema Oranye) -->
@@ -5750,7 +5790,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                                 "
                                                 type="button"
                                                 @click="kirimKeAdminPlatform"
-                                                :disabled="form.processing"
+                                                :loading="form.processing"
                                                 class="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-xs gap-1.5 cursor-pointer transition ring-2 ring-orange-400/20"
                                                 title="Serahkan hasil edit ke Admin Platform"
                                             >
@@ -5758,7 +5798,7 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                                     >Kirim ke Admin
                                                     Platform</span
                                                 >
-                                                <Send class="w-4 h-4" />
+                                                <Send v-if="!form.processing" class="w-4 h-4" />
                                             </Button>
 
                                             <!-- 3. Tahap Admin Platform: Selesaikan Konten (Tema Hijau) -->
@@ -5769,11 +5809,11 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                                 "
                                                 type="button"
                                                 @click="selesaikanKonten"
-                                                :disabled="form.processing"
+                                                :loading="form.processing"
                                                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-4 shrink-0 shadow-xs gap-1.5 cursor-pointer transition ring-2 ring-emerald-400/20"
                                                 title="Publikasi selesai dan ubah status jadi Tayang"
                                             >
-                                                <CheckCircle2 class="w-4 h-4" />
+                                                <CheckCircle2 v-if="!form.processing" class="w-4 h-4" />
                                                 <span>Selesaikan Konten</span>
                                             </Button>
                                         </template>
@@ -5933,13 +5973,13 @@ const getCleanSnippet = (text, maxLength = 85) => {
                                     <Button
                                         type="submit"
                                         size="sm"
+                                        :loading="commentForm.processing"
                                         :disabled="
-                                            !commentForm.body?.trim() ||
-                                            commentForm.processing
+                                            !commentForm.body?.trim()
                                         "
                                         class="h-9 px-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold shrink-0 cursor-pointer shadow-xs gap-1"
                                     >
-                                        <Send class="w-3.5 h-3.5" />
+                                        <Send v-if="!commentForm.processing" class="w-3.5 h-3.5" />
                                         <span class="hidden sm:inline"
                                             >Kirim</span
                                         >

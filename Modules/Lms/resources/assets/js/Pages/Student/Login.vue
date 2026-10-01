@@ -15,12 +15,14 @@ import {
     BookOpen,
     MapPin,
     Hash,
+    Loader2,
 } from "lucide-vue-next";
 
 // Steps: 1 = Input Email, 2 = Konfirmasi Profil
 const step = ref(1);
 const emailInput = ref("");
 const isChecking = ref(false);
+const isConfirming = ref(false);
 const errorMessage = ref("");
 
 const participantData = ref({
@@ -86,14 +88,23 @@ const checkEmail = async () => {
 };
 
 const confirmProfile = () => {
-    router.post("/lms/login/confirm", {
-        email: participantData.value.email,
-        name: participantData.value.name,
-        nik: participantData.value.nik,
-        phone: participantData.value.phone,
-        address: participantData.value.address,
-        gender: participantData.value.gender,
-    });
+    isConfirming.value = true;
+    router.post(
+        "/lms/login/confirm",
+        {
+            email: participantData.value.email,
+            name: participantData.value.name,
+            nik: participantData.value.nik,
+            phone: participantData.value.phone,
+            address: participantData.value.address,
+            gender: participantData.value.gender,
+        },
+        {
+            onFinish: () => {
+                isConfirming.value = false;
+            },
+        },
+    );
 };
 </script>
 
@@ -175,10 +186,11 @@ const confirmProfile = () => {
                             :disabled="isChecking"
                             class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50"
                         >
+                            <Loader2 v-if="isChecking" class="w-4 h-4 animate-spin shrink-0" />
                             <span>{{
                                 isChecking ? "Memeriksa Data..." : "Lanjutkan"
                             }}</span>
-                            <ArrowRight class="w-4 h-4" />
+                            <ArrowRight v-if="!isChecking" class="w-4 h-4" />
                         </button>
                     </form>
 
@@ -394,10 +406,12 @@ const confirmProfile = () => {
                             </button>
                             <button
                                 type="submit"
-                                class="w-2/3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/30 active:scale-95"
+                                :disabled="isConfirming"
+                                class="w-2/3 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-600/30 active:scale-95 disabled:opacity-50"
                             >
-                                <CheckCircle2 class="w-4 h-4" />
-                                <span>Konfirmasi & Masuk Dashboard</span>
+                                <Loader2 v-if="isConfirming" class="w-4 h-4 animate-spin shrink-0" />
+                                <CheckCircle2 v-else class="w-4 h-4 shrink-0" />
+                                <span>{{ isConfirming ? "Menghubungkan..." : "Konfirmasi & Masuk Dashboard" }}</span>
                             </button>
                         </div>
                     </form>
