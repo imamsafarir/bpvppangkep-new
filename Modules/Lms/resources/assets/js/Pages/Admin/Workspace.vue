@@ -976,7 +976,19 @@ const deleteLesson = (lesson) => {
 };
 
 const handleLessonMedia = (e) => {
-    lessonForm.media_file = e.target.files[0] || null;
+    const file = e.target.files[0] || null;
+    if (file) {
+        const sizeMb = file.size / (1024 * 1024);
+        if (sizeMb > 50) {
+            alert(
+                `Ukuran file "${file.name}" adalah ${sizeMb.toFixed(1)} MB, melebihi batas maksimal upload 50 MB.`
+            );
+            e.target.value = "";
+            lessonForm.media_file = null;
+            return;
+        }
+    }
+    lessonForm.media_file = file;
 };
 
 // Curriculum Import (Unit & Elemen Kompetensi via Excel/CSV)

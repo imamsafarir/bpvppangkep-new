@@ -82,3 +82,9 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Increase maximum request body size (100MB) for Apache/LiteSpeed
+<IfModule mod_core.c>
+    LimitRequestBody 104857600
+</IfModule>
+
