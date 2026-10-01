@@ -42,10 +42,10 @@ class WebsiteController extends Controller
             }
         }
 
-        $settings = Cache::remember('shared_website_settings', 3600, fn () => WebsiteSetting::first() ?? new WebsiteSetting);
-        $beritaTerbaru = Cache::remember('website_home_berita', 300, fn () => BeritaDanGaleri::where('jenis', 'berita')->latest()->take(6)->get());
-        $dokumenInformasi = Cache::remember('website_home_info', 300, fn () => InformasiPublik::latest()->take(6)->get());
-        $infoModel = Cache::remember('website_home_info_model', 1800, fn () => Informasi::first());
+        $settings = WebsiteSetting::first() ?? new WebsiteSetting;
+        $beritaTerbaru = BeritaDanGaleri::where('jenis', 'berita')->latest()->take(6)->get();
+        $dokumenInformasi = InformasiPublik::latest()->take(6)->get();
+        $infoModel = Informasi::first();
 
         $stats = Cache::remember('website_home_stats', 300, function () {
             return [

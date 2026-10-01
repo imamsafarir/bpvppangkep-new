@@ -34,17 +34,4 @@ class WebsiteSetting extends Model
         'is_popup_active'        => 'boolean',
         'is_running_text_active' => 'boolean',
     ];
-
-    protected static function booted(): void
-    {
-        static::saved(function () {
-            \Illuminate\Support\Facades\Cache::forget('shared_website_settings');
-            \Illuminate\Support\Facades\Cache::forget('website_home_stats');
-        });
-
-        static::deleted(function () {
-            \Illuminate\Support\Facades\Cache::forget('shared_website_settings');
-            \Illuminate\Support\Facades\Cache::forget('website_home_stats');
-        });
-    }
 }

@@ -7,7 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     @php
-        $siteSettings = \Illuminate\Support\Facades\Cache::remember('shared_website_settings', 3600, fn() => \Modules\Website\Models\WebsiteSetting::first());
+        $siteSettings = \Modules\Website\Models\WebsiteSetting::first();
         $seoService = app(\Modules\Website\Services\SeoService::class);
         $seo = $seoService->resolveMetadata($page ?? []);
 

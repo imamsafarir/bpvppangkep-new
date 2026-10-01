@@ -69,7 +69,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn() => $request->session()->get('success'),
                 'error' => fn() => $request->session()->get('error'),
             ],
-            'settings' => fn() => \Illuminate\Support\Facades\Cache::remember('shared_website_settings', 3600, fn() => \Modules\Website\Models\WebsiteSetting::first()),
+            'settings' => fn() => \Modules\Website\Models\WebsiteSetting::first(),
         ];
     }
 }
