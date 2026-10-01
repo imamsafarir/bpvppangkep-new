@@ -86,9 +86,12 @@ const form = useForm({
     cover_image: null,
 });
 
+const currentCourseCover = ref(null);
+
 const openCreateModal = () => {
     isEditing.value = false;
     currentCourseId.value = null;
+    currentCourseCover.value = null;
     form.reset();
     form.clearErrors();
     form.status = "draft";
@@ -98,6 +101,7 @@ const openCreateModal = () => {
 const openEditModal = (course) => {
     isEditing.value = true;
     currentCourseId.value = course.id;
+    currentCourseCover.value = course.cover_image || null;
     form.clearErrors();
     form.title = course.title || "";
     form.category = course.category || "";
@@ -115,13 +119,15 @@ const openEditModal = (course) => {
 
 const submitCourse = () => {
     if (isEditing.value) {
-        form.put(`/admin/lms/${currentCourseId.value}`, {
+        form.post(`/admin/lms/${currentCourseId.value}/update`, {
+            preserveScroll: true,
             onSuccess: () => {
                 showCourseModal.value = false;
             },
         });
     } else {
         form.post("/admin/lms", {
+            preserveScroll: true,
             onSuccess: () => {
                 showCourseModal.value = false;
             },
@@ -187,7 +193,19 @@ const deleteCourse = (course) => {
 };
 
 const handleCoverChange = (e) => {
-    form.cover_image = e.target.files[0] || null;
+    const file = e.target.files[0] || null;
+    if (file) {
+        const sizeMb = file.size / (1024 * 1024);
+        if (sizeMb > 10) {
+            alert(
+                `Ukuran foto sampul "${file.name}" adalah ${sizeMb.toFixed(1)} MB, melebihi batas maksimal 10 MB.`
+            );
+            e.target.value = "";
+            form.cover_image = null;
+            return;
+        }
+    }
+    form.cover_image = file;
 };
 
 const formatDateIndo = (dateStr) => {
@@ -897,12 +915,34 @@ const formatDateRange = (start, end) => {
                         >
                             Foto Sampul Kelas (Cover Image)
                         </label>
+                        <!-- Existing Cover Preview if editing -->
+                        <div
+                            v-if="currentCourseCover && isEditing"
+                            class="mb-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center gap-3"
+                        >
+                            <img
+                                :src="'/storage/' + currentCourseCover"
+                                class="w-16 h-11 object-cover rounded-lg shadow-sm border border-slate-300 dark:border-slate-600 shrink-0"
+                                alt="Sampul saat ini"
+                            />
+                            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                                <span class="font-semibold text-slate-700 dark:text-slate-200 block">Sampul Saat Ini Aktif</span>
+                                <span>Pilih file baru di bawah ini jika ingin mengganti sampul kelas.</span>
+                            </div>
+                        </div>
+
                         <input
                             type="file"
                             accept="image/*"
                             @change="handleCoverChange"
                             class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 dark:file:bg-slate-800 dark:file:text-slate-200"
                         />
+                        <p
+                            v-if="form.errors.cover_image"
+                            class="text-xs text-rose-500 mt-1"
+                        >
+                            {{ form.errors.cover_image }}
+                        </p>
                     </div>
 
                     <!-- Description -->

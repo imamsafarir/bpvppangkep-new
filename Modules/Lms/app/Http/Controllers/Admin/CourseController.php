@@ -117,7 +117,7 @@ class CourseController extends Controller
             'zoom_meeting_id' => 'nullable|string|max:100',
             'zoom_passcode' => 'nullable|string|max:100',
             'status' => 'required|in:draft,published,archived',
-            'cover_image' => 'nullable|image|max:3072',
+            'cover_image' => 'nullable|image|max:10240',
         ]);
 
         $zoomDate = $validated['zoom_date'] ?? $validated['start_date'] ?? null;
@@ -256,7 +256,7 @@ class CourseController extends Controller
             'zoom_meeting_id' => 'nullable|string|max:100',
             'zoom_passcode' => 'nullable|string|max:100',
             'status' => 'required|in:draft,published,archived',
-            'cover_image' => 'nullable|image|max:3072',
+            'cover_image' => 'nullable|image|max:10240',
             'certificate_number_format' => 'nullable|string|max:100',
         ]);
 

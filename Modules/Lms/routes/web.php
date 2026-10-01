@@ -59,7 +59,8 @@ Route::middleware(['auth', 'role:admin_lms,admin,super_admin,admin_lms_instructo
         // Main Card Grid Dashboard
         Route::get('/', [CourseController::class, 'index'])->name('index');
         Route::post('/', [CourseController::class, 'store'])->name('store');
-        Route::put('/{course}', [CourseController::class, 'update'])->name('update');
+        Route::match(['put', 'post'], '/{course}', [CourseController::class, 'update'])->name('update');
+        Route::post('/{course}/update', [CourseController::class, 'update'])->name('update.post');
         Route::patch('/{course}/status', [CourseController::class, 'updateStatus'])->name('status');
         Route::patch('/{course}/dates', [CourseController::class, 'updateDates'])->name('dates');
         Route::delete('/{course}', [CourseController::class, 'destroy'])->name('destroy');
