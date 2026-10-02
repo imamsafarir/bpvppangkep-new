@@ -174,7 +174,8 @@ const formatToInputDate = (dateStr) => {
             hourCycle: "h23",
         }).formatToParts(d);
 
-        const getPart = (type) => parts.find((p) => p.type === type)?.value || "00";
+        const getPart = (type) =>
+            parts.find((p) => p.type === type)?.value || "00";
         return `${getPart("year")}-${getPart("month")}-${getPart("day")}T${getPart("hour")}:${getPart("minute")}`;
     } catch (e) {
         return "";
@@ -417,7 +418,10 @@ const openAddModuleModal = () => {
     ) {
         defaultDay =
             parseInt(selectedScheduleFilter.value.replace("day_", ""), 10) || 1;
-    } else if (selectedScheduleFilter.value === "today" && todayDayNumber.value) {
+    } else if (
+        selectedScheduleFilter.value === "today" &&
+        todayDayNumber.value
+    ) {
         defaultDay = todayDayNumber.value;
     } else {
         const maxDay =
@@ -642,7 +646,7 @@ const initUnitState = (mod) => {
         ? String(mod.scheduled_date).substring(0, 10)
         : mod.zoom_start_at
           ? String(mod.zoom_start_at).substring(0, 10)
-          : (getDateForDayNumber(dayNum) || todayWita.value);
+          : getDateForDayNumber(dayNum) || todayWita.value;
 
     const initialStart = mod.start_time
         ? String(mod.start_time).substring(0, 5)
@@ -773,12 +777,18 @@ const submitUnitZoomSchedule = (mod) => {
                             isEditingZoomEnded.value[m.id] = false;
                             isEditingZoomLive.value[m.id] = false;
                             if (unitZoomForms.value[m.id]) {
-                                unitZoomForms.value[m.id].scheduled_date = form.scheduled_date;
-                                unitZoomForms.value[m.id].start_time = form.start_time;
-                                unitZoomForms.value[m.id].end_time = form.end_time;
-                                unitZoomForms.value[m.id].zoom_link = form.zoom_link;
-                                unitZoomForms.value[m.id].zoom_meeting_id = form.zoom_meeting_id;
-                                unitZoomForms.value[m.id].zoom_passcode = form.zoom_passcode;
+                                unitZoomForms.value[m.id].scheduled_date =
+                                    form.scheduled_date;
+                                unitZoomForms.value[m.id].start_time =
+                                    form.start_time;
+                                unitZoomForms.value[m.id].end_time =
+                                    form.end_time;
+                                unitZoomForms.value[m.id].zoom_link =
+                                    form.zoom_link;
+                                unitZoomForms.value[m.id].zoom_meeting_id =
+                                    form.zoom_meeting_id;
+                                unitZoomForms.value[m.id].zoom_passcode =
+                                    form.zoom_passcode;
                             }
                         }
                     });
@@ -958,7 +968,8 @@ const selectUnitAttendanceDuration = (mod, mins) => {
             if ((m.day_number || 1) === dayNum) {
                 unitSelectedDuration.value[m.id] = val;
                 if (unitScheduledAttendanceForm.value[m.id]) {
-                    unitScheduledAttendanceForm.value[m.id].duration_minutes = val;
+                    unitScheduledAttendanceForm.value[m.id].duration_minutes =
+                        val;
                 }
             }
         });
@@ -987,9 +998,13 @@ const submitUnitScheduleAttendance = (mod) => {
                 const schedTime = new Date(f.scheduled_at).getTime();
                 const durationMs = dur * 60 * 1000;
                 const now = Date.now();
-                const isActive = now >= schedTime && now <= schedTime + durationMs;
+                const isActive =
+                    now >= schedTime && now <= schedTime + durationMs;
                 const remSec = isActive
-                    ? Math.max(0, Math.floor((schedTime + durationMs - now) / 1000))
+                    ? Math.max(
+                          0,
+                          Math.floor((schedTime + durationMs - now) / 1000),
+                      )
                     : 0;
 
                 if (props.course?.modules) {
@@ -1004,10 +1019,12 @@ const submitUnitScheduleAttendance = (mod) => {
                             }
                             unitSelectedDuration.value[m.id] = dur;
                             if (unitScheduledAttendanceForm.value[m.id]) {
-                                unitScheduledAttendanceForm.value[m.id].scheduled_at =
-                                    f.scheduled_at;
-                                unitScheduledAttendanceForm.value[m.id].duration_minutes =
-                                    dur;
+                                unitScheduledAttendanceForm.value[
+                                    m.id
+                                ].scheduled_at = f.scheduled_at;
+                                unitScheduledAttendanceForm.value[
+                                    m.id
+                                ].duration_minutes = dur;
                             }
                             if (isActive) {
                                 unitAttendanceTimers.value[m.id] = remSec;
@@ -1223,7 +1240,7 @@ const handleLessonMedia = (e) => {
         const sizeMb = file.size / (1024 * 1024);
         if (sizeMb > 50) {
             alert(
-                `Ukuran file "${file.name}" adalah ${sizeMb.toFixed(1)} MB, melebihi batas maksimal upload 50 MB.`
+                `Ukuran file "${file.name}" adalah ${sizeMb.toFixed(1)} MB, melebihi batas maksimal upload 50 MB.`,
             );
             e.target.value = "";
             lessonForm.media_file = null;
@@ -1578,6 +1595,20 @@ const deleteSelectedEnrollments = () => {
     }
 };
 
+// Modal Preview Surat Pernyataan
+const showDeclarationModal = ref(false);
+const selectedDeclarationEnrollment = ref(null);
+
+const openDeclarationModal = (enrollment) => {
+    selectedDeclarationEnrollment.value = enrollment;
+    showDeclarationModal.value = true;
+};
+
+const closeDeclarationModal = () => {
+    showDeclarationModal.value = false;
+    selectedDeclarationEnrollment.value = null;
+};
+
 // Edit Participant Modal
 const showEditModal = ref(false);
 const editingEnrollment = ref(null);
@@ -1834,7 +1865,10 @@ const isUnitAttendanceActive = (mod) => {
     // 2. If closed_at timestamp has passed and timer is 0 or less, attendance is closed
     if (mod.zoom_attendance_closed_at) {
         const closedTime = new Date(mod.zoom_attendance_closed_at).getTime();
-        if (Date.now() >= closedTime && (unitAttendanceTimers.value[mod.id] || 0) <= 0) {
+        if (
+            Date.now() >= closedTime &&
+            (unitAttendanceTimers.value[mod.id] || 0) <= 0
+        ) {
             return false;
         }
     }
@@ -1848,8 +1882,13 @@ const isUnitAttendanceActive = (mod) => {
         if (now >= schedTime && now <= schedTime + durationMs) {
             // If explicitly closed after or at scheduled time
             if (mod.zoom_attendance_closed_at) {
-                const closedTime = new Date(mod.zoom_attendance_closed_at).getTime();
-                if (closedTime >= schedTime && (unitAttendanceTimers.value[mod.id] || 0) <= 0) {
+                const closedTime = new Date(
+                    mod.zoom_attendance_closed_at,
+                ).getTime();
+                if (
+                    closedTime >= schedTime &&
+                    (unitAttendanceTimers.value[mod.id] || 0) <= 0
+                ) {
                     return false;
                 }
             }
@@ -1875,7 +1914,9 @@ const isUnitAttendanceEnded = (mod) => {
             (mod.zoom_attendance_duration_minutes || 30) * 60 * 1000;
         if (Date.now() >= schedTime + durationMs) return true;
         if (mod.zoom_attendance_closed_at) {
-            const closedTime = new Date(mod.zoom_attendance_closed_at).getTime();
+            const closedTime = new Date(
+                mod.zoom_attendance_closed_at,
+            ).getTime();
             if (closedTime >= schedTime) return true;
         }
     }
@@ -1884,7 +1925,11 @@ const isUnitAttendanceEnded = (mod) => {
         if (Date.now() >= closedTime) return true;
     }
     if (mod.zoom_status === "ended") return true;
-    if (mod.zoom_attendance_opened_at && !mod.is_attendance_open_now && (unitAttendanceTimers.value[mod.id] || 0) <= 0)
+    if (
+        mod.zoom_attendance_opened_at &&
+        !mod.is_attendance_open_now &&
+        (unitAttendanceTimers.value[mod.id] || 0) <= 0
+    )
         return true;
     return false;
 };
@@ -1910,7 +1955,10 @@ const isAnyAttendanceActive = computed(() => {
                 const closed = new Date(
                     props.course.zoom_attendance_closed_at,
                 ).getTime();
-                if (closed >= schedTime && (remainingAttendanceSeconds.value || 0) <= 0) {
+                if (
+                    closed >= schedTime &&
+                    (remainingAttendanceSeconds.value || 0) <= 0
+                ) {
                     return false;
                 }
             }
@@ -1923,7 +1971,10 @@ const isAnyAttendanceActive = computed(() => {
         const closedTime = new Date(
             props.course.zoom_attendance_closed_at,
         ).getTime();
-        if (Date.now() >= closedTime && (remainingAttendanceSeconds.value || 0) <= 0) {
+        if (
+            Date.now() >= closedTime &&
+            (remainingAttendanceSeconds.value || 0) <= 0
+        ) {
             return false;
         }
     }
@@ -2017,7 +2068,9 @@ onMounted(() => {
                     unitAttendanceTimers.value[id]--;
                     if (unitAttendanceTimers.value[id] <= 0) {
                         unitAttendanceTimers.value[id] = 0;
-                        const mod = props.course?.modules?.find((m) => m.id == id);
+                        const mod = props.course?.modules?.find(
+                            (m) => m.id == id,
+                        );
                         if (mod) {
                             mod.is_attendance_open_now = false;
                         }
@@ -2080,7 +2133,6 @@ const formatReadableDate = (dateStr) => {
         minute: "2-digit",
     });
 };
-
 
 const calculateDurationDays = (startDate, endDate) => {
     if (!startDate || !endDate) return null;
@@ -2996,9 +3048,19 @@ const uploadTemplateImage = (e) => {
                                     <span
                                         class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
                                     >
-                                        WITA Hari Ini: {{ formatDateIndo(todayWita) }}
-                                        <template v-if="todayDayNumber"> (Hari ke-{{ todayDayNumber }})</template>
-                                        <template v-else-if="courseStatusRelative"> &bull; {{ courseStatusRelative }}</template>
+                                        WITA Hari Ini:
+                                        {{ formatDateIndo(todayWita) }}
+                                        <template v-if="todayDayNumber">
+                                            (Hari ke-{{
+                                                todayDayNumber
+                                            }})</template
+                                        >
+                                        <template
+                                            v-else-if="courseStatusRelative"
+                                        >
+                                            &bull;
+                                            {{ courseStatusRelative }}</template
+                                        >
                                     </span>
                                     <span
                                         v-if="
@@ -3037,7 +3099,11 @@ const uploadTemplateImage = (e) => {
                                     class="w-full text-xs font-bold py-2.5 pl-3 pr-8 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 shadow-sm focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                                 >
                                     <option value="all">
-                                        📅 Tampilkan Semua Hari ({{ distinctDays.length }} Hari &bull; {{ course.modules?.length || 0 }} Unit)
+                                        📅 Tampilkan Semua Hari ({{
+                                            distinctDays.length
+                                        }}
+                                        Hari &bull;
+                                        {{ course.modules?.length || 0 }} Unit)
                                     </option>
                                     <option v-if="todayDayNumber" value="today">
                                         🌟 Hari Ini (Hari ke-{{
@@ -3051,9 +3117,13 @@ const uploadTemplateImage = (e) => {
                                             :key="d"
                                             :value="'day_' + d"
                                         >
-                                            Hari ke-{{ d }} &bull; {{ formatDateIndo(getDateForDayNumber(d)) }} ({{
-                                                countUnitsForDay(d)
+                                            Hari ke-{{ d }} &bull;
+                                            {{
+                                                formatDateIndo(
+                                                    getDateForDayNumber(d),
+                                                )
                                             }}
+                                            ({{ countUnitsForDay(d) }}
                                             Unit Kompetensi)
                                         </option>
                                     </optgroup>
@@ -3102,19 +3172,24 @@ const uploadTemplateImage = (e) => {
                             class="text-sm font-bold text-amber-900 dark:text-amber-200"
                         >
                             Tidak Ada Unit Kompetensi Terjadwal Hari Ini
-                            <template v-if="todayDayNumber"> (Hari ke-{{ todayDayNumber }})</template>
+                            <template v-if="todayDayNumber">
+                                (Hari ke-{{ todayDayNumber }})</template
+                            >
                         </h4>
                         <p
                             class="text-xs text-amber-700 dark:text-amber-300 mt-1 max-w-lg mx-auto"
                         >
                             Hari ini adalah {{ formatDateIndo(todayWita) }}.
                             <template v-if="todayDayNumber">
-                                Belum ada unit kompetensi yang diset untuk Hari ke-{{ todayDayNumber }}.
+                                Belum ada unit kompetensi yang diset untuk Hari
+                                ke-{{ todayDayNumber }}.
                             </template>
                             <template v-else-if="courseStatusRelative">
                                 Status kelas: {{ courseStatusRelative }}.
                             </template>
-                            Anda dapat melihat unit di hari lain melalui dropdown di atas atau klik tombol berikut untuk melihat seluruh unit.
+                            Anda dapat melihat unit di hari lain melalui
+                            dropdown di atas atau klik tombol berikut untuk
+                            melihat seluruh unit.
                         </p>
                     </div>
                     <div class="flex items-center justify-center gap-2 pt-1">
@@ -3130,12 +3205,14 @@ const uploadTemplateImage = (e) => {
                             @click="openAddModuleModal"
                             class="px-4 py-2 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-xl text-xs font-bold hover:bg-amber-100 transition"
                         >
-                            + Tambah Unit untuk Hari ke-{{ todayDayNumber || 1 }}
+                            + Tambah Unit untuk Hari ke-{{
+                                todayDayNumber || 1
+                            }}
                         </button>
                     </div>
                 </div>
 
-            <!-- Grouped by Day (Filtered by Dropdown) -->
+                <!-- Grouped by Day (Filtered by Dropdown) -->
                 <div v-if="groupedModulesByDay.length > 0" class="space-y-8">
                     <div
                         v-for="dayGroup in groupedModulesByDay"
@@ -3151,26 +3228,45 @@ const uploadTemplateImage = (e) => {
                                     class="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black tracking-wider shadow-sm flex items-center gap-1.5"
                                 >
                                     <Calendar class="w-3.5 h-3.5" />
-                                    <span>HARI KE-{{ dayGroup.day_number }}</span>
+                                    <span
+                                        >HARI KE-{{ dayGroup.day_number }}</span
+                                    >
                                 </span>
                                 <div>
                                     <div class="flex items-center gap-2">
                                         <h3
                                             class="text-sm font-bold text-slate-900 dark:text-white"
                                         >
-                                            Kegiatan Pelatihan Hari Ke-{{ dayGroup.day_number }}
+                                            Kegiatan Pelatihan Hari Ke-{{
+                                                dayGroup.day_number
+                                            }}
                                         </h3>
                                         <span
-                                            v-if="dayGroup.scheduled_date || getDateForDayNumber(dayGroup.day_number)"
+                                            v-if="
+                                                dayGroup.scheduled_date ||
+                                                getDateForDayNumber(
+                                                    dayGroup.day_number,
+                                                )
+                                            "
                                             class="text-xs text-slate-500 dark:text-slate-400 font-medium"
                                         >
-                                            &bull; {{ formatDateIndo(dayGroup.scheduled_date || getDateForDayNumber(dayGroup.day_number)) }}
+                                            &bull;
+                                            {{
+                                                formatDateIndo(
+                                                    dayGroup.scheduled_date ||
+                                                        getDateForDayNumber(
+                                                            dayGroup.day_number,
+                                                        ),
+                                                )
+                                            }}
                                         </span>
                                     </div>
                                     <p
                                         class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5"
                                     >
-                                        Memuat {{ dayGroup.modules.length }} Unit Kompetensi &bull;
+                                        Memuat
+                                        {{ dayGroup.modules.length }} Unit
+                                        Kompetensi &bull;
                                         <span
                                             :class="
                                                 dayGroup.hasSinkronus
@@ -3180,8 +3276,8 @@ const uploadTemplateImage = (e) => {
                                         >
                                             {{
                                                 dayGroup.hasSinkronus
-                                                    ? 'Tatap Muka Online (Sinkronus)'
-                                                    : 'Belajar Mandiri (Asinkronus)'
+                                                    ? "Tatap Muka Online (Sinkronus)"
+                                                    : "Belajar Mandiri (Asinkronus)"
                                             }}
                                         </span>
                                     </p>
@@ -3199,872 +3295,1043 @@ const uploadTemplateImage = (e) => {
                                 :key="mod.id"
                             >
                                 <!-- Per-Unit Zoom & Attendance Panel (For Sinkronus Units) -->
-                        <div
-                            v-if="mod.delivery_mode === 'sinkronus'"
-                            class="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-1"
-                        >
-                            <!-- Left: Jadwal & Akses Zoom Sesi Unit Ini -->
-                            <div
-                                class="rounded-xl p-4 border transition-all space-y-3 flex flex-col justify-between"
-                                :class="
-                                    isUnitZoomLive(mod)
-                                        ? 'bg-rose-50 border-rose-300 dark:bg-rose-950/30 dark:border-rose-900/60'
-                                        : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60'
-                                "
-                            >
                                 <div
-                                    class="flex items-center justify-between border-b pb-2.5"
-                                    :class="
-                                        isUnitZoomLive(mod)
-                                            ? 'border-rose-200 dark:border-rose-900/60'
-                                            : 'border-slate-200 dark:border-slate-700/60'
-                                    "
+                                    v-if="mod.delivery_mode === 'sinkronus'"
+                                    class="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-1"
                                 >
-                                    <div class="flex items-center gap-2">
-                                        <Video
-                                            class="w-4 h-4"
+                                    <!-- Left: Jadwal & Akses Zoom Sesi Unit Ini -->
+                                    <div
+                                        class="rounded-xl p-4 border transition-all space-y-3 flex flex-col justify-between"
+                                        :class="
+                                            isUnitZoomLive(mod)
+                                                ? 'bg-rose-50 border-rose-300 dark:bg-rose-950/30 dark:border-rose-900/60'
+                                                : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60'
+                                        "
+                                    >
+                                        <div
+                                            class="flex items-center justify-between border-b pb-2.5"
                                             :class="
                                                 isUnitZoomLive(mod)
-                                                    ? 'text-rose-600 dark:text-rose-400'
-                                                    : 'text-blue-600 dark:text-blue-400'
+                                                    ? 'border-rose-200 dark:border-rose-900/60'
+                                                    : 'border-slate-200 dark:border-slate-700/60'
                                             "
-                                        />
-                                        <h4
-                                            class="text-xs font-bold text-slate-800 dark:text-slate-200"
                                         >
-                                            Jadwal & Tautan Online Meeting Hari Ke-{{ dayGroup.day_number }}
-                                        </h4>
-                                    </div>
-                                    <!-- Zoom Status Badge -->
-                                    <span
-                                        v-if="isUnitZoomLive(mod)"
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse shadow-sm"
-                                    >
-                                        <span
-                                            class="w-1.5 h-1.5 rounded-full bg-white animate-ping"
-                                        ></span>
-                                        LIVE SEKARANG &bull; Sisa:
-                                        {{
-                                            formatTimeRemaining(
-                                                unitZoomTimers[mod.id] || 0,
-                                            )
-                                        }}
-                                    </span>
-                                    <span
-                                        v-else-if="
-                                            mod.zoom_status === 'upcoming'
-                                        "
-                                        class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                    >
-                                        DIJADWALKAN
-                                    </span>
-                                    <span
-                                        v-else-if="mod.zoom_status === 'ended'"
-                                        class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                    >
-                                        BERAKHIR
-                                    </span>
-                                    <span
-                                        v-else
-                                        class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                                    >
-                                        Belum Dijadwalkan
-                                    </span>
-                                </div>
-
-                                <!-- IF ONLINE MEETING IS CURRENTLY LIVE FOR THIS UNIT -->
-                                <div
-                                    v-if="isUnitZoomLive(mod)"
-                                    class="space-y-3 bg-white dark:bg-slate-900/80 p-3.5 rounded-lg border border-rose-200 dark:border-rose-900/40"
-                                >
-                                    <div
-                                        class="flex items-center justify-between gap-2"
-                                    >
-                                        <div>
-                                            <p
-                                                class="text-xs font-black text-rose-700 dark:text-rose-400 flex items-center gap-1.5"
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <Video
+                                                    class="w-4 h-4"
+                                                    :class="
+                                                        isUnitZoomLive(mod)
+                                                            ? 'text-rose-600 dark:text-rose-400'
+                                                            : 'text-blue-600 dark:text-blue-400'
+                                                    "
+                                                />
+                                                <h4
+                                                    class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                                                >
+                                                    Jadwal & Tautan Online
+                                                    Meeting Hari Ke-{{
+                                                        dayGroup.day_number
+                                                    }}
+                                                </h4>
+                                            </div>
+                                            <!-- Zoom Status Badge -->
+                                            <span
+                                                v-if="isUnitZoomLive(mod)"
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse shadow-sm"
                                             >
                                                 <span
-                                                    class="w-2 h-2 rounded-full bg-rose-600 animate-ping"
+                                                    class="w-1.5 h-1.5 rounded-full bg-white animate-ping"
                                                 ></span>
-                                                Sesi Online Meeting Sedang
-                                                Berjalan
-                                            </p>
-                                            <p
-                                                class="text-[11px] text-slate-500"
-                                            >
-                                                Tautan tatap muka online aktif
-                                                dan peserta dapat bergabung ke
-                                                ruang meeting.
-                                            </p>
-                                        </div>
-                                        <span
-                                            class="text-lg font-black font-mono text-rose-600"
-                                        >
-                                            {{
-                                                formatTimeRemaining(
-                                                    unitZoomTimers[mod.id] || 0,
-                                                )
-                                            }}
-                                        </span>
-                                    </div>
-
-                                    <div
-                                        class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-rose-100 dark:border-rose-900/30"
-                                    >
-                                        <div class="flex items-center gap-1.5">
-                                            <a
-                                                v-if="
-                                                    unitZoomForms[mod.id]
-                                                        ?.zoom_link ||
-                                                    mod.zoom_link
-                                                "
-                                                :href="
-                                                    unitZoomForms[mod.id]
-                                                        ?.zoom_link ||
-                                                    mod.zoom_link
-                                                "
-                                                target="_blank"
-                                                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5"
-                                            >
-                                                <ExternalLink
-                                                    class="w-3.5 h-3.5"
-                                                />
-                                                <span
-                                                    >Masuk / Buka Meeting</span
-                                                >
-                                            </a>
-                                            <button
-                                                type="button"
-                                                @click="
-                                                    isEditingZoomLive[mod.id] =
-                                                        !isEditingZoomLive[
-                                                            mod.id
-                                                        ]
-                                                "
-                                                class="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition inline-flex items-center gap-1"
-                                            >
-                                                <Pencil class="w-3 h-3" />
-                                                <span>{{
-                                                    isEditingZoomLive[mod.id]
-                                                        ? "Tutup Edit"
-                                                        : "Ubah Tautan / Jam"
-                                                }}</span>
-                                            </button>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            @click="endUnitZoomNow(mod)"
-                                            :disabled="isEndingUnitZoom[mod.id]"
-                                            class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
-                                            title="Akhiri sesi Online Meeting unit ini"
-                                        >
-                                            <StopCircle class="w-3.5 h-3.5" />
-                                            <span>AKHIRI MEETING SEKARANG</span>
-                                        </button>
-                                    </div>
-
-                                    <!-- Collapsible Edit Form during Live if instructor needs to change link -->
-                                    <div
-                                        v-if="isEditingZoomLive[mod.id]"
-                                        class="pt-2 border-t border-slate-200 dark:border-slate-700/60 space-y-2 text-xs"
-                                    >
-                                        <div
-                                            class="grid grid-cols-1 sm:grid-cols-2 gap-2"
-                                        >
-                                            <div>
-                                                <label
-                                                    class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                    >Tanggal</label
-                                                >
-                                                <input
-                                                    v-if="unitZoomForms[mod.id]"
-                                                    v-model="
-                                                        unitZoomForms[mod.id]
-                                                            .scheduled_date
-                                                    "
-                                                    type="date"
-                                                    class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                                                />
-                                            </div>
-                                            <div class="grid grid-cols-2 gap-1">
-                                                <div>
-                                                    <label
-                                                        class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                        >Mulai</label
-                                                    >
-                                                    <input
-                                                        v-if="
-                                                            unitZoomForms[
-                                                                mod.id
-                                                            ]
-                                                        "
-                                                        v-model="
-                                                            unitZoomForms[
-                                                                mod.id
-                                                            ].start_time
-                                                        "
-                                                        type="text"
-                                                        class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label
-                                                        class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                        >Selesai</label
-                                                    >
-                                                    <input
-                                                        v-if="
-                                                            unitZoomForms[
-                                                                mod.id
-                                                            ]
-                                                        "
-                                                        v-model="
-                                                            unitZoomForms[
-                                                                mod.id
-                                                            ].end_time
-                                                        "
-                                                        type="text"
-                                                        class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label
-                                                class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                >Link Meeting</label
-                                            >
-                                            <input
-                                                v-if="unitZoomForms[mod.id]"
-                                                v-model="
-                                                    unitZoomForms[mod.id]
-                                                        .zoom_link
-                                                "
-                                                type="text"
-                                                class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                                            />
-                                        </div>
-                                        <button
-                                            type="button"
-                                            @click="submitUnitZoomSchedule(mod)"
-                                            :disabled="
-                                                unitZoomForms[mod.id]?.isSaving
-                                            "
-                                            class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold transition flex items-center gap-1"
-                                        >
-                                            <Save class="w-3 h-3" />
-                                            <span>Simpan Perubahan</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Centered Closed State when Ended -->
-                                <div
-                                    v-else-if="
-                                        mod.zoom_status === 'ended' &&
-                                        !isEditingZoomEnded[mod.id]
-                                    "
-                                    @click="isEditingZoomEnded[mod.id] = true"
-                                    class="my-auto py-8 px-4 flex flex-col items-center justify-center text-center rounded-xl bg-slate-100/70 dark:bg-slate-900/40 border border-dashed border-slate-300 dark:border-slate-700 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-950/20 hover:border-blue-400 dark:hover:border-blue-500 transition group select-none"
-                                    title="Klik untuk membuka sesi susulan / ubah jadwal"
-                                >
-                                    <div
-                                        class="w-12 h-12 rounded-full bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mb-2 group-hover:scale-110 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition shadow-sm"
-                                    >
-                                        <Video class="w-6 h-6" />
-                                    </div>
-                                    <h5
-                                        class="text-xs font-black text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition"
-                                    >
-                                        Sesi Online Meeting Sudah Berakhir
-                                    </h5>
-                                    <p
-                                        class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed"
-                                    >
-                                        Sesi tatap muka online untuk unit ini
-                                        telah diselesaikan. Peserta yang belum
-                                        hadir diarahkan ke belajar mandiri.
-                                    </p>
-                                    <div
-                                        class="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-blue-600 dark:text-blue-400 shadow-sm group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition"
-                                    >
-                                        <RefreshCw
-                                            class="w-3.5 h-3.5 group-hover:rotate-180 transition duration-500"
-                                        />
-                                        <span
-                                            >Klik di Sini Jika Ingin Sesi
-                                            Susulan / Ubah Jadwal</span
-                                        >
-                                    </div>
-                                </div>
-
-                                <!-- Form when Active / Upcoming / Editing Susulan -->
-                                <div v-else class="space-y-2.5 text-xs">
-                                    <!-- Banner if in Susulan Mode -->
-                                    <div
-                                        v-if="
-                                            mod.zoom_status === 'ended' &&
-                                            isEditingZoomEnded[mod.id]
-                                        "
-                                        class="flex items-center justify-between px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-lg text-xs"
-                                    >
-                                        <span
-                                            class="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5 text-[11px]"
-                                        >
-                                            <RefreshCw class="w-3.5 h-3.5" />
-                                            Mode Sesi Susulan / Ubah Jadwal
-                                        </span>
-                                        <button
-                                            type="button"
-                                            @click.stop="
-                                                isEditingZoomEnded[mod.id] =
-                                                    false
-                                            "
-                                            class="px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800 rounded transition"
-                                        >
-                                            &times; Tutup
-                                        </button>
-                                    </div>
-
-                                    <div
-                                        class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
-                                    >
-                                        <div>
-                                            <label
-                                                class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                >Tanggal Online Meeting</label
-                                            >
-                                            <input
-                                                v-if="unitZoomForms[mod.id]"
-                                                v-model="
-                                                    unitZoomForms[mod.id]
-                                                        .scheduled_date
-                                                "
-                                                type="date"
-                                                class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-medium"
-                                            />
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-1.5">
-                                            <div>
-                                                <label
-                                                    class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                    >Jam Mulai</label
-                                                >
-                                                <input
-                                                    v-if="unitZoomForms[mod.id]"
-                                                    v-model="
-                                                        unitZoomForms[mod.id]
-                                                            .start_time
-                                                    "
-                                                    type="text"
-                                                    placeholder="22:50"
-                                                    class="w-full text-xs px-2 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                    >Jam Selesai</label
-                                                >
-                                                <input
-                                                    v-if="unitZoomForms[mod.id]"
-                                                    v-model="
-                                                        unitZoomForms[mod.id]
-                                                            .end_time
-                                                    "
-                                                    type="text"
-                                                    placeholder="22:55"
-                                                    class="w-full text-xs px-2 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                            >Link Online Meeting Tatap
-                                            Muka</label
-                                        >
-                                        <input
-                                            v-if="unitZoomForms[mod.id]"
-                                            v-model="
-                                                unitZoomForms[mod.id].zoom_link
-                                            "
-                                            type="text"
-                                            placeholder="Contoh: https://meet.google.com/... atau https://zoom.us/j/..."
-                                            class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                                        />
-                                    </div>
-
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label
-                                                class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                >Meeting ID (Opsional)</label
-                                            >
-                                            <input
-                                                v-if="unitZoomForms[mod.id]"
-                                                v-model="
-                                                    unitZoomForms[mod.id]
-                                                        .zoom_meeting_id
-                                                "
-                                                type="text"
-                                                placeholder="Contoh: 832 9481 0291"
-                                                class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label
-                                                class="block text-[10px] font-semibold text-slate-500 mb-0.5"
-                                                >Passcode (Opsional)</label
-                                            >
-                                            <input
-                                                v-if="unitZoomForms[mod.id]"
-                                                v-model="
-                                                    unitZoomForms[mod.id]
-                                                        .zoom_passcode
-                                                "
-                                                type="text"
-                                                placeholder="Contoh: 123456"
-                                                class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div
-                                        class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200 dark:border-slate-700/60"
-                                    >
-                                        <div class="flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                @click="
-                                                    submitUnitZoomSchedule(mod)
-                                                "
-                                                :disabled="
-                                                    unitZoomForms[mod.id]
-                                                        ?.isSaving
-                                                "
-                                                class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1"
-                                            >
-                                                <Save class="w-3.5 h-3.5" />
-                                                <span>{{
-                                                    unitZoomForms[mod.id]
-                                                        ?.isSaving
-                                                        ? "Menyimpan..."
-                                                        : "Simpan Link & Jam"
-                                                }}</span>
-                                            </button>
-                                            <a
-                                                v-if="
-                                                    unitZoomForms[mod.id]
-                                                        ?.zoom_link ||
-                                                    mod.zoom_link
-                                                "
-                                                :href="
-                                                    unitZoomForms[mod.id]
-                                                        ?.zoom_link ||
-                                                    mod.zoom_link
-                                                "
-                                                target="_blank"
-                                                class="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition inline-flex items-center gap-1"
-                                            >
-                                                <ExternalLink class="w-3 h-3" />
-                                                <span>Uji</span>
-                                            </a>
-                                        </div>
-
-                                        <div class="flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                @click="startUnitZoomNow(mod)"
-                                                :disabled="
-                                                    isStartingUnitZoom[mod.id]
-                                                "
-                                                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition disabled:opacity-50 flex items-center gap-1"
-                                                title="Langsung mulai sesi Online Meeting unit ini (status LIVE)"
-                                            >
-                                                <Play class="w-3 h-3" />
-                                                <span
-                                                    >Mulai Online Meeting</span
-                                                >
-                                            </button>
-                                            <button
-                                                type="button"
-                                                @click="endUnitZoomNow(mod)"
-                                                :disabled="
-                                                    isEndingUnitZoom[mod.id]
-                                                "
-                                                class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
-                                                title="Akhiri sesi Online Meeting unit ini"
-                                            >
-                                                <StopCircle class="w-3 h-3" />
-                                                <span>Akhiri Meeting</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Right: Kontrol Jendela Presensi / Absensi Siswa Unit Ini -->
-                            <div
-                                class="rounded-xl p-4 border transition-all space-y-3 flex flex-col justify-between"
-                                :class="
-                                    isUnitAttendanceActive(mod)
-                                        ? 'bg-rose-50 border-rose-300 dark:bg-rose-950/30 dark:border-rose-900/60'
-                                        : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60'
-                                "
-                            >
-                                <div
-                                    class="flex items-center justify-between border-b pb-2.5"
-                                    :class="
-                                        isUnitAttendanceActive(mod)
-                                            ? 'border-rose-200 dark:border-rose-900/60'
-                                            : 'border-slate-200 dark:border-slate-700/60'
-                                    "
-                                >
-                                    <div class="flex items-center gap-2">
-                                        <CheckCircle2
-                                            class="w-4 h-4"
-                                            :class="
-                                                isUnitAttendanceActive(mod)
-                                                    ? 'text-rose-600 dark:text-rose-400'
-                                                    : 'text-emerald-600 dark:text-emerald-400'
-                                            "
-                                        />
-                                        <h4
-                                            class="text-xs font-bold text-slate-800 dark:text-slate-200"
-                                        >
-                                            Kontrol Presensi / Absen Online Hari Ke-{{ dayGroup.day_number }}
-                                        </h4>
-                                    </div>
-
-                                    <!-- Attendance Live Status Badge -->
-                                    <span
-                                        v-if="isUnitAttendanceActive(mod)"
-                                        class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse shadow-sm"
-                                    >
-                                        <span
-                                            class="w-1.5 h-1.5 rounded-full bg-white animate-ping"
-                                        ></span>
-                                        ABSEN DIBUKA &bull; Sisa:
-                                        {{
-                                            formatTimeRemaining(
-                                                unitAttendanceTimers[mod.id] ||
-                                                    0,
-                                            )
-                                        }}
-                                    </span>
-                                    <span
-                                        v-else-if="isUnitAttendanceEnded(mod)"
-                                        class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                    >
-                                        ABSEN DITUTUP
-                                    </span>
-                                    <span
-                                        v-else-if="
-                                            mod.zoom_attendance_scheduled_at
-                                        "
-                                        class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                    >
-                                        DIJADWALKAN
-                                    </span>
-                                    <span
-                                        v-else
-                                        class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                                    >
-                                        Belum Dibuka
-                                    </span>
-                                </div>
-
-                                <!-- IF ATTENDANCE IS CURRENTLY OPEN FOR THIS UNIT -->
-                                <div
-                                    v-if="isUnitAttendanceActive(mod)"
-                                    class="space-y-3 bg-white dark:bg-slate-900/80 p-3.5 rounded-lg border border-rose-200 dark:border-rose-900/40"
-                                >
-                                    <div
-                                        class="flex items-center justify-between gap-2"
-                                    >
-                                        <div>
-                                            <p
-                                                class="text-xs font-black text-rose-700 dark:text-rose-400 flex items-center gap-1.5"
-                                            >
-                                                <span
-                                                    class="w-2 h-2 rounded-full bg-rose-600 animate-ping"
-                                                ></span>
-                                                Sesi Absen Unit Sedang Berjalan
-                                            </p>
-                                            <p
-                                                class="text-[11px] text-slate-500"
-                                            >
-                                                Tombol presensi aktif di ruang
-                                                kelas seluruh siswa untuk unit
-                                                ini.
-                                            </p>
-                                        </div>
-                                        <span
-                                            class="text-lg font-black font-mono text-rose-600"
-                                        >
-                                            {{
-                                                formatTimeRemaining(
-                                                    unitAttendanceTimers[
-                                                        mod.id
-                                                    ] || 0,
-                                                )
-                                            }}
-                                        </span>
-                                    </div>
-
-                                    <div
-                                        class="flex items-center gap-2 pt-1 border-t border-rose-100 dark:border-rose-900/30"
-                                    >
-                                        <button
-                                            type="button"
-                                            @click="
-                                                extendUnitAttendance(mod, 15)
-                                            "
-                                            :disabled="
-                                                isOpeningUnitAttendance[mod.id]
-                                            "
-                                            class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1 shadow-sm"
-                                        >
-                                            <Plus class="w-3.5 h-3.5" />
-                                            <span>+15 Mnt</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click="closeUnitAttendanceNow(mod)"
-                                            :disabled="
-                                                isOpeningUnitAttendance[mod.id]
-                                            "
-                                            class="flex-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
-                                        >
-                                            <StopCircle class="w-3.5 h-3.5" />
-                                            <span
-                                                >TUTUP SESI ABSEN SEKARANG</span
-                                            >
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Centered Closed State when Attendance Ended -->
-                                <div
-                                    v-else-if="
-                                        isUnitAttendanceEnded(mod) &&
-                                        !isOpeningAttendanceSusulan[mod.id]
-                                    "
-                                    @click="
-                                        isOpeningAttendanceSusulan[mod.id] =
-                                            true
-                                    "
-                                    class="my-auto py-8 px-4 flex flex-col items-center justify-center text-center rounded-xl bg-slate-100/70 dark:bg-slate-900/40 border border-dashed border-slate-300 dark:border-slate-700 cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 hover:border-emerald-400 dark:hover:border-emerald-500 transition group select-none"
-                                    title="Klik untuk membuka sesi presensi susulan"
-                                >
-                                    <div
-                                        class="w-12 h-12 rounded-full bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mb-2 group-hover:scale-110 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/40 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition shadow-sm"
-                                    >
-                                        <CheckCircle2 class="w-6 h-6" />
-                                    </div>
-                                    <h5
-                                        class="text-xs font-black text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition"
-                                    >
-                                        Sesi Presensi Online Sudah Berakhir /
-                                        Ditutup
-                                    </h5>
-                                    <p
-                                        class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed"
-                                    >
-                                        Jendela presensi online untuk unit ini
-                                        telah ditutup. Peserta terlambat yang
-                                        belum presensi dapat diarahkan presensi
-                                        susulan atau belajar mandiri.
-                                    </p>
-                                    <div
-                                        class="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-sm group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 transition"
-                                    >
-                                        <RefreshCw
-                                            class="w-3.5 h-3.5 group-hover:rotate-180 transition duration-500"
-                                        />
-                                        <span
-                                            >Klik di Sini Jika Ingin Buka
-                                            Presensi Susulan</span
-                                        >
-                                    </div>
-                                </div>
-
-                                <!-- IF ATTENDANCE IS CLOSED: PRESETS & SCHEDULE -->
-                                <div v-else class="space-y-2.5 text-xs">
-                                    <!-- Banner if in Susulan Mode -->
-                                    <div
-                                        v-if="
-                                            isUnitAttendanceEnded(mod) &&
-                                            isOpeningAttendanceSusulan[mod.id]
-                                        "
-                                        class="flex items-center justify-between px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-lg text-xs"
-                                    >
-                                        <span
-                                            class="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 text-[11px]"
-                                        >
-                                            <RefreshCw class="w-3.5 h-3.5" />
-                                            Mode Presensi Susulan / Buka Ulang
-                                        </span>
-                                        <button
-                                            type="button"
-                                            @click.stop="
-                                                isOpeningAttendanceSusulan[
-                                                    mod.id
-                                                ] = false
-                                            "
-                                            class="px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800 rounded transition"
-                                        >
-                                            &times; Tutup
-                                        </button>
-                                    </div>
-
-                                    <span
-                                        class="text-[11px] font-bold text-slate-700 dark:text-slate-300 block"
-                                    >
-                                        ⚡ Pilih Durasi Sesi Absen Unit:
-                                    </span>
-
-                                    <div
-                                        class="flex flex-wrap items-center gap-1.5"
-                                    >
-                                        <button
-                                            v-for="mins in [15, 30, 45, 60]"
-                                            :key="mins"
-                                            type="button"
-                                            @click="
-                                                selectUnitAttendanceDuration(
-                                                    mod,
-                                                    mins,
-                                                )
-                                            "
-                                            class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition border"
-                                            :class="
-                                                (unitSelectedDuration[mod.id] ||
-                                                    30) === mins
-                                                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/20'
-                                                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                                            "
-                                        >
-                                            {{ mins }} Mnt
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            @click="
-                                                openUnitAttendanceWithDuration(
-                                                    mod,
-                                                    unitSelectedDuration[
-                                                        mod.id
-                                                    ] || 30,
-                                                )
-                                            "
-                                            :disabled="
-                                                isOpeningUnitAttendance[mod.id]
-                                            "
-                                            class="ml-auto px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-md shadow-emerald-600/30 transition transform active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
-                                        >
-                                            <CheckCircle2 class="w-3.5 h-3.5" />
-                                            <span
-                                                >BUKA SEKARANG ({{
-                                                    unitSelectedDuration[
-                                                        mod.id
-                                                    ] || 30
-                                                }}
-                                                MENIT)</span
-                                            >
-                                        </button>
-                                    </div>
-
-                                    <!-- Jadwalkan Buka Absen Otomatis Form -->
-                                    <div
-                                        class="pt-2 border-t border-slate-200 dark:border-slate-700/60"
-                                    >
-                                        <div
-                                            class="flex items-center justify-between mb-1"
-                                        >
-                                            <label
-                                                class="block text-[10px] font-semibold text-slate-500"
-                                            >
-                                                Atau Jadwalkan Jam Buka Absen
-                                                Otomatis:
-                                            </label>
-                                            <span
-                                                class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400"
-                                            >
-                                                Durasi:
+                                                LIVE SEKARANG &bull; Sisa:
                                                 {{
-                                                    unitSelectedDuration[
-                                                        mod.id
-                                                    ] || 30
+                                                    formatTimeRemaining(
+                                                        unitZoomTimers[
+                                                            mod.id
+                                                        ] || 0,
+                                                    )
                                                 }}
-                                                Menit
+                                            </span>
+                                            <span
+                                                v-else-if="
+                                                    mod.zoom_status ===
+                                                    'upcoming'
+                                                "
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                            >
+                                                DIJADWALKAN
+                                            </span>
+                                            <span
+                                                v-else-if="
+                                                    mod.zoom_status === 'ended'
+                                                "
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                            >
+                                                BERAKHIR
+                                            </span>
+                                            <span
+                                                v-else
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                                            >
+                                                Belum Dijadwalkan
                                             </span>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <input
+
+                                        <!-- IF ONLINE MEETING IS CURRENTLY LIVE FOR THIS UNIT -->
+                                        <div
+                                            v-if="isUnitZoomLive(mod)"
+                                            class="space-y-3 bg-white dark:bg-slate-900/80 p-3.5 rounded-lg border border-rose-200 dark:border-rose-900/40"
+                                        >
+                                            <div
+                                                class="flex items-center justify-between gap-2"
+                                            >
+                                                <div>
+                                                    <p
+                                                        class="text-xs font-black text-rose-700 dark:text-rose-400 flex items-center gap-1.5"
+                                                    >
+                                                        <span
+                                                            class="w-2 h-2 rounded-full bg-rose-600 animate-ping"
+                                                        ></span>
+                                                        Sesi Online Meeting
+                                                        Sedang Berjalan
+                                                    </p>
+                                                    <p
+                                                        class="text-[11px] text-slate-500"
+                                                    >
+                                                        Tautan tatap muka online
+                                                        aktif dan peserta dapat
+                                                        bergabung ke ruang
+                                                        meeting.
+                                                    </p>
+                                                </div>
+                                                <span
+                                                    class="text-lg font-black font-mono text-rose-600"
+                                                >
+                                                    {{
+                                                        formatTimeRemaining(
+                                                            unitZoomTimers[
+                                                                mod.id
+                                                            ] || 0,
+                                                        )
+                                                    }}
+                                                </span>
+                                            </div>
+
+                                            <div
+                                                class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-rose-100 dark:border-rose-900/30"
+                                            >
+                                                <div
+                                                    class="flex items-center gap-1.5"
+                                                >
+                                                    <a
+                                                        v-if="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]?.zoom_link ||
+                                                            mod.zoom_link
+                                                        "
+                                                        :href="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]?.zoom_link ||
+                                                            mod.zoom_link
+                                                        "
+                                                        target="_blank"
+                                                        class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5"
+                                                    >
+                                                        <ExternalLink
+                                                            class="w-3.5 h-3.5"
+                                                        />
+                                                        <span
+                                                            >Masuk / Buka
+                                                            Meeting</span
+                                                        >
+                                                    </a>
+                                                    <button
+                                                        type="button"
+                                                        @click="
+                                                            isEditingZoomLive[
+                                                                mod.id
+                                                            ] =
+                                                                !isEditingZoomLive[
+                                                                    mod.id
+                                                                ]
+                                                        "
+                                                        class="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 transition inline-flex items-center gap-1"
+                                                    >
+                                                        <Pencil
+                                                            class="w-3 h-3"
+                                                        />
+                                                        <span>{{
+                                                            isEditingZoomLive[
+                                                                mod.id
+                                                            ]
+                                                                ? "Tutup Edit"
+                                                                : "Ubah Tautan / Jam"
+                                                        }}</span>
+                                                    </button>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    @click="endUnitZoomNow(mod)"
+                                                    :disabled="
+                                                        isEndingUnitZoom[mod.id]
+                                                    "
+                                                    class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                                                    title="Akhiri sesi Online Meeting unit ini"
+                                                >
+                                                    <StopCircle
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    <span
+                                                        >AKHIRI MEETING
+                                                        SEKARANG</span
+                                                    >
+                                                </button>
+                                            </div>
+
+                                            <!-- Collapsible Edit Form during Live if instructor needs to change link -->
+                                            <div
+                                                v-if="isEditingZoomLive[mod.id]"
+                                                class="pt-2 border-t border-slate-200 dark:border-slate-700/60 space-y-2 text-xs"
+                                            >
+                                                <div
+                                                    class="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                                                >
+                                                    <div>
+                                                        <label
+                                                            class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                            >Tanggal</label
+                                                        >
+                                                        <input
+                                                            v-if="
+                                                                unitZoomForms[
+                                                                    mod.id
+                                                                ]
+                                                            "
+                                                            v-model="
+                                                                unitZoomForms[
+                                                                    mod.id
+                                                                ].scheduled_date
+                                                            "
+                                                            type="date"
+                                                            class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                                                        />
+                                                    </div>
+                                                    <div
+                                                        class="grid grid-cols-2 gap-1"
+                                                    >
+                                                        <div>
+                                                            <label
+                                                                class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                                >Mulai</label
+                                                            >
+                                                            <input
+                                                                v-if="
+                                                                    unitZoomForms[
+                                                                        mod.id
+                                                                    ]
+                                                                "
+                                                                v-model="
+                                                                    unitZoomForms[
+                                                                        mod.id
+                                                                    ].start_time
+                                                                "
+                                                                type="text"
+                                                                class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label
+                                                                class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                                >Selesai</label
+                                                            >
+                                                            <input
+                                                                v-if="
+                                                                    unitZoomForms[
+                                                                        mod.id
+                                                                    ]
+                                                                "
+                                                                v-model="
+                                                                    unitZoomForms[
+                                                                        mod.id
+                                                                    ].end_time
+                                                                "
+                                                                type="text"
+                                                                class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                        >Link Meeting</label
+                                                    >
+                                                    <input
+                                                        v-if="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]
+                                                        "
+                                                        v-model="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ].zoom_link
+                                                        "
+                                                        type="text"
+                                                        class="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        submitUnitZoomSchedule(
+                                                            mod,
+                                                        )
+                                                    "
+                                                    :disabled="
+                                                        unitZoomForms[mod.id]
+                                                            ?.isSaving
+                                                    "
+                                                    class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-bold transition flex items-center gap-1"
+                                                >
+                                                    <Save class="w-3 h-3" />
+                                                    <span
+                                                        >Simpan Perubahan</span
+                                                    >
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Centered Closed State when Ended -->
+                                        <div
+                                            v-else-if="
+                                                mod.zoom_status === 'ended' &&
+                                                !isEditingZoomEnded[mod.id]
+                                            "
+                                            @click="
+                                                isEditingZoomEnded[mod.id] =
+                                                    true
+                                            "
+                                            class="my-auto py-8 px-4 flex flex-col items-center justify-center text-center rounded-xl bg-slate-100/70 dark:bg-slate-900/40 border border-dashed border-slate-300 dark:border-slate-700 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-950/20 hover:border-blue-400 dark:hover:border-blue-500 transition group select-none"
+                                            title="Klik untuk membuka sesi susulan / ubah jadwal"
+                                        >
+                                            <div
+                                                class="w-12 h-12 rounded-full bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mb-2 group-hover:scale-110 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition shadow-sm"
+                                            >
+                                                <Video class="w-6 h-6" />
+                                            </div>
+                                            <h5
+                                                class="text-xs font-black text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition"
+                                            >
+                                                Sesi Online Meeting Sudah
+                                                Berakhir
+                                            </h5>
+                                            <p
+                                                class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed"
+                                            >
+                                                Sesi tatap muka online untuk
+                                                unit ini telah diselesaikan.
+                                                Peserta yang belum hadir
+                                                diarahkan ke belajar mandiri.
+                                            </p>
+                                            <div
+                                                class="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-blue-600 dark:text-blue-400 shadow-sm group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition"
+                                            >
+                                                <RefreshCw
+                                                    class="w-3.5 h-3.5 group-hover:rotate-180 transition duration-500"
+                                                />
+                                                <span
+                                                    >Klik di Sini Jika Ingin
+                                                    Sesi Susulan / Ubah
+                                                    Jadwal</span
+                                                >
+                                            </div>
+                                        </div>
+
+                                        <!-- Form when Active / Upcoming / Editing Susulan -->
+                                        <div v-else class="space-y-2.5 text-xs">
+                                            <!-- Banner if in Susulan Mode -->
+                                            <div
                                                 v-if="
-                                                    unitScheduledAttendanceForm[
+                                                    mod.zoom_status ===
+                                                        'ended' &&
+                                                    isEditingZoomEnded[mod.id]
+                                                "
+                                                class="flex items-center justify-between px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-lg text-xs"
+                                            >
+                                                <span
+                                                    class="font-bold text-blue-700 dark:text-blue-300 flex items-center gap-1.5 text-[11px]"
+                                                >
+                                                    <RefreshCw
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    Mode Sesi Susulan / Ubah
+                                                    Jadwal
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="
+                                                        isEditingZoomEnded[
+                                                            mod.id
+                                                        ] = false
+                                                    "
+                                                    class="px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800 rounded transition"
+                                                >
+                                                    &times; Tutup
+                                                </button>
+                                            </div>
+
+                                            <div
+                                                class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+                                            >
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                        >Tanggal Online
+                                                        Meeting</label
+                                                    >
+                                                    <input
+                                                        v-if="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]
+                                                        "
+                                                        v-model="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ].scheduled_date
+                                                        "
+                                                        type="date"
+                                                        class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-medium"
+                                                    />
+                                                </div>
+                                                <div
+                                                    class="grid grid-cols-2 gap-1.5"
+                                                >
+                                                    <div>
+                                                        <label
+                                                            class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                            >Jam Mulai</label
+                                                        >
+                                                        <input
+                                                            v-if="
+                                                                unitZoomForms[
+                                                                    mod.id
+                                                                ]
+                                                            "
+                                                            v-model="
+                                                                unitZoomForms[
+                                                                    mod.id
+                                                                ].start_time
+                                                            "
+                                                            type="text"
+                                                            placeholder="22:50"
+                                                            class="w-full text-xs px-2 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label
+                                                            class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                            >Jam Selesai</label
+                                                        >
+                                                        <input
+                                                            v-if="
+                                                                unitZoomForms[
+                                                                    mod.id
+                                                                ]
+                                                            "
+                                                            v-model="
+                                                                unitZoomForms[
+                                                                    mod.id
+                                                                ].end_time
+                                                            "
+                                                            type="text"
+                                                            placeholder="22:55"
+                                                            class="w-full text-xs px-2 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label
+                                                    class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                    >Link Online Meeting Tatap
+                                                    Muka</label
+                                                >
+                                                <input
+                                                    v-if="unitZoomForms[mod.id]"
+                                                    v-model="
+                                                        unitZoomForms[mod.id]
+                                                            .zoom_link
+                                                    "
+                                                    type="text"
+                                                    placeholder="Contoh: https://meet.google.com/... atau https://zoom.us/j/..."
+                                                    class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                                                />
+                                            </div>
+
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                        >Meeting ID
+                                                        (Opsional)</label
+                                                    >
+                                                    <input
+                                                        v-if="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]
+                                                        "
+                                                        v-model="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ].zoom_meeting_id
+                                                        "
+                                                        type="text"
+                                                        placeholder="Contoh: 832 9481 0291"
+                                                        class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label
+                                                        class="block text-[10px] font-semibold text-slate-500 mb-0.5"
+                                                        >Passcode
+                                                        (Opsional)</label
+                                                    >
+                                                    <input
+                                                        v-if="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]
+                                                        "
+                                                        v-model="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ].zoom_passcode
+                                                        "
+                                                        type="text"
+                                                        placeholder="Contoh: 123456"
+                                                        class="w-full text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-200 dark:border-slate-700/60"
+                                            >
+                                                <div
+                                                    class="flex items-center gap-1.5"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        @click="
+                                                            submitUnitZoomSchedule(
+                                                                mod,
+                                                            )
+                                                        "
+                                                        :disabled="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]?.isSaving
+                                                        "
+                                                        class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1"
+                                                    >
+                                                        <Save
+                                                            class="w-3.5 h-3.5"
+                                                        />
+                                                        <span>{{
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]?.isSaving
+                                                                ? "Menyimpan..."
+                                                                : "Simpan Link & Jam"
+                                                        }}</span>
+                                                    </button>
+                                                    <a
+                                                        v-if="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]?.zoom_link ||
+                                                            mod.zoom_link
+                                                        "
+                                                        :href="
+                                                            unitZoomForms[
+                                                                mod.id
+                                                            ]?.zoom_link ||
+                                                            mod.zoom_link
+                                                        "
+                                                        target="_blank"
+                                                        class="px-2.5 py-1.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 transition inline-flex items-center gap-1"
+                                                    >
+                                                        <ExternalLink
+                                                            class="w-3 h-3"
+                                                        />
+                                                        <span>Uji</span>
+                                                    </a>
+                                                </div>
+
+                                                <div
+                                                    class="flex items-center gap-1.5"
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        @click="
+                                                            startUnitZoomNow(
+                                                                mod,
+                                                            )
+                                                        "
+                                                        :disabled="
+                                                            isStartingUnitZoom[
+                                                                mod.id
+                                                            ]
+                                                        "
+                                                        class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition disabled:opacity-50 flex items-center gap-1"
+                                                        title="Langsung mulai sesi Online Meeting unit ini (status LIVE)"
+                                                    >
+                                                        <Play class="w-3 h-3" />
+                                                        <span
+                                                            >Mulai Online
+                                                            Meeting</span
+                                                        >
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        @click="
+                                                            endUnitZoomNow(mod)
+                                                        "
+                                                        :disabled="
+                                                            isEndingUnitZoom[
+                                                                mod.id
+                                                            ]
+                                                        "
+                                                        class="px-2.5 py-1.5 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-bold transition disabled:opacity-50"
+                                                        title="Akhiri sesi Online Meeting unit ini"
+                                                    >
+                                                        <StopCircle
+                                                            class="w-3 h-3"
+                                                        />
+                                                        <span
+                                                            >Akhiri
+                                                            Meeting</span
+                                                        >
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Right: Kontrol Jendela Presensi / Absensi Siswa Unit Ini -->
+                                    <div
+                                        class="rounded-xl p-4 border transition-all space-y-3 flex flex-col justify-between"
+                                        :class="
+                                            isUnitAttendanceActive(mod)
+                                                ? 'bg-rose-50 border-rose-300 dark:bg-rose-950/30 dark:border-rose-900/60'
+                                                : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700/60'
+                                        "
+                                    >
+                                        <div
+                                            class="flex items-center justify-between border-b pb-2.5"
+                                            :class="
+                                                isUnitAttendanceActive(mod)
+                                                    ? 'border-rose-200 dark:border-rose-900/60'
+                                                    : 'border-slate-200 dark:border-slate-700/60'
+                                            "
+                                        >
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <CheckCircle2
+                                                    class="w-4 h-4"
+                                                    :class="
+                                                        isUnitAttendanceActive(
+                                                            mod,
+                                                        )
+                                                            ? 'text-rose-600 dark:text-rose-400'
+                                                            : 'text-emerald-600 dark:text-emerald-400'
+                                                    "
+                                                />
+                                                <h4
+                                                    class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                                                >
+                                                    Kontrol Presensi / Absen
+                                                    Online Hari Ke-{{
+                                                        dayGroup.day_number
+                                                    }}
+                                                </h4>
+                                            </div>
+
+                                            <!-- Attendance Live Status Badge -->
+                                            <span
+                                                v-if="
+                                                    isUnitAttendanceActive(mod)
+                                                "
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse shadow-sm"
+                                            >
+                                                <span
+                                                    class="w-1.5 h-1.5 rounded-full bg-white animate-ping"
+                                                ></span>
+                                                ABSEN DIBUKA &bull; Sisa:
+                                                {{
+                                                    formatTimeRemaining(
+                                                        unitAttendanceTimers[
+                                                            mod.id
+                                                        ] || 0,
+                                                    )
+                                                }}
+                                            </span>
+                                            <span
+                                                v-else-if="
+                                                    isUnitAttendanceEnded(mod)
+                                                "
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                            >
+                                                ABSEN DITUTUP
+                                            </span>
+                                            <span
+                                                v-else-if="
+                                                    mod.zoom_attendance_scheduled_at
+                                                "
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                            >
+                                                DIJADWALKAN
+                                            </span>
+                                            <span
+                                                v-else
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                                            >
+                                                Belum Dibuka
+                                            </span>
+                                        </div>
+
+                                        <!-- IF ATTENDANCE IS CURRENTLY OPEN FOR THIS UNIT -->
+                                        <div
+                                            v-if="isUnitAttendanceActive(mod)"
+                                            class="space-y-3 bg-white dark:bg-slate-900/80 p-3.5 rounded-lg border border-rose-200 dark:border-rose-900/40"
+                                        >
+                                            <div
+                                                class="flex items-center justify-between gap-2"
+                                            >
+                                                <div>
+                                                    <p
+                                                        class="text-xs font-black text-rose-700 dark:text-rose-400 flex items-center gap-1.5"
+                                                    >
+                                                        <span
+                                                            class="w-2 h-2 rounded-full bg-rose-600 animate-ping"
+                                                        ></span>
+                                                        Sesi Absen Unit Sedang
+                                                        Berjalan
+                                                    </p>
+                                                    <p
+                                                        class="text-[11px] text-slate-500"
+                                                    >
+                                                        Tombol presensi aktif di
+                                                        ruang kelas seluruh
+                                                        siswa untuk unit ini.
+                                                    </p>
+                                                </div>
+                                                <span
+                                                    class="text-lg font-black font-mono text-rose-600"
+                                                >
+                                                    {{
+                                                        formatTimeRemaining(
+                                                            unitAttendanceTimers[
+                                                                mod.id
+                                                            ] || 0,
+                                                        )
+                                                    }}
+                                                </span>
+                                            </div>
+
+                                            <div
+                                                class="flex items-center gap-2 pt-1 border-t border-rose-100 dark:border-rose-900/30"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        extendUnitAttendance(
+                                                            mod,
+                                                            15,
+                                                        )
+                                                    "
+                                                    :disabled="
+                                                        isOpeningUnitAttendance[
+                                                            mod.id
+                                                        ]
+                                                    "
+                                                    class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1 shadow-sm"
+                                                >
+                                                    <Plus class="w-3.5 h-3.5" />
+                                                    <span>+15 Mnt</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        closeUnitAttendanceNow(
+                                                            mod,
+                                                        )
+                                                    "
+                                                    :disabled="
+                                                        isOpeningUnitAttendance[
+                                                            mod.id
+                                                        ]
+                                                    "
+                                                    class="flex-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-black transition disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-sm"
+                                                >
+                                                    <StopCircle
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    <span
+                                                        >TUTUP SESI ABSEN
+                                                        SEKARANG</span
+                                                    >
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Centered Closed State when Attendance Ended -->
+                                        <div
+                                            v-else-if="
+                                                isUnitAttendanceEnded(mod) &&
+                                                !isOpeningAttendanceSusulan[
+                                                    mod.id
+                                                ]
+                                            "
+                                            @click="
+                                                isOpeningAttendanceSusulan[
+                                                    mod.id
+                                                ] = true
+                                            "
+                                            class="my-auto py-8 px-4 flex flex-col items-center justify-center text-center rounded-xl bg-slate-100/70 dark:bg-slate-900/40 border border-dashed border-slate-300 dark:border-slate-700 cursor-pointer hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 hover:border-emerald-400 dark:hover:border-emerald-500 transition group select-none"
+                                            title="Klik untuk membuka sesi presensi susulan"
+                                        >
+                                            <div
+                                                class="w-12 h-12 rounded-full bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 mb-2 group-hover:scale-110 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/40 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition shadow-sm"
+                                            >
+                                                <CheckCircle2 class="w-6 h-6" />
+                                            </div>
+                                            <h5
+                                                class="text-xs font-black text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition"
+                                            >
+                                                Sesi Presensi Online Sudah
+                                                Berakhir / Ditutup
+                                            </h5>
+                                            <p
+                                                class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 max-w-xs leading-relaxed"
+                                            >
+                                                Jendela presensi online untuk
+                                                unit ini telah ditutup. Peserta
+                                                terlambat yang belum presensi
+                                                dapat diarahkan presensi susulan
+                                                atau belajar mandiri.
+                                            </p>
+                                            <div
+                                                class="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-sm group-hover:bg-emerald-600 group-hover:text-white group-hover:border-emerald-600 transition"
+                                            >
+                                                <RefreshCw
+                                                    class="w-3.5 h-3.5 group-hover:rotate-180 transition duration-500"
+                                                />
+                                                <span
+                                                    >Klik di Sini Jika Ingin
+                                                    Buka Presensi Susulan</span
+                                                >
+                                            </div>
+                                        </div>
+
+                                        <!-- IF ATTENDANCE IS CLOSED: PRESETS & SCHEDULE -->
+                                        <div v-else class="space-y-2.5 text-xs">
+                                            <!-- Banner if in Susulan Mode -->
+                                            <div
+                                                v-if="
+                                                    isUnitAttendanceEnded(
+                                                        mod,
+                                                    ) &&
+                                                    isOpeningAttendanceSusulan[
                                                         mod.id
                                                     ]
                                                 "
-                                                v-model="
-                                                    unitScheduledAttendanceForm[
-                                                        mod.id
-                                                    ].scheduled_at
-                                                "
-                                                type="datetime-local"
-                                                class="flex-1 text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
-                                            />
-                                            <button
-                                                type="button"
-                                                @click="
-                                                    submitUnitScheduleAttendance(
-                                                        mod,
-                                                    )
-                                                "
-                                                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm shrink-0"
-                                                title="Jadwalkan jam buka absen otomatis"
+                                                class="flex items-center justify-between px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-lg text-xs"
                                             >
-                                                <Clock class="w-3.5 h-3.5" />
                                                 <span
-                                                    >Jadwalkan ({{
-                                                        unitSelectedDuration[
-                                                            mod.id
-                                                        ] || 30
-                                                    }}
-                                                    Mnt)</span
+                                                    class="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5 text-[11px]"
                                                 >
-                                            </button>
+                                                    <RefreshCw
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    Mode Presensi Susulan / Buka
+                                                    Ulang
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    @click.stop="
+                                                        isOpeningAttendanceSusulan[
+                                                            mod.id
+                                                        ] = false
+                                                    "
+                                                    class="px-2 py-0.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-800 rounded transition"
+                                                >
+                                                    &times; Tutup
+                                                </button>
+                                            </div>
+
+                                            <span
+                                                class="text-[11px] font-bold text-slate-700 dark:text-slate-300 block"
+                                            >
+                                                ⚡ Pilih Durasi Sesi Absen Unit:
+                                            </span>
+
+                                            <div
+                                                class="flex flex-wrap items-center gap-1.5"
+                                            >
+                                                <button
+                                                    v-for="mins in [
+                                                        15, 30, 45, 60,
+                                                    ]"
+                                                    :key="mins"
+                                                    type="button"
+                                                    @click="
+                                                        selectUnitAttendanceDuration(
+                                                            mod,
+                                                            mins,
+                                                        )
+                                                    "
+                                                    class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition border"
+                                                    :class="
+                                                        (unitSelectedDuration[
+                                                            mod.id
+                                                        ] || 30) === mins
+                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/20'
+                                                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                                                    "
+                                                >
+                                                    {{ mins }} Mnt
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        openUnitAttendanceWithDuration(
+                                                            mod,
+                                                            unitSelectedDuration[
+                                                                mod.id
+                                                            ] || 30,
+                                                        )
+                                                    "
+                                                    :disabled="
+                                                        isOpeningUnitAttendance[
+                                                            mod.id
+                                                        ]
+                                                    "
+                                                    class="ml-auto px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-black shadow-md shadow-emerald-600/30 transition transform active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
+                                                >
+                                                    <CheckCircle2
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    <span
+                                                        >BUKA SEKARANG ({{
+                                                            unitSelectedDuration[
+                                                                mod.id
+                                                            ] || 30
+                                                        }}
+                                                        MENIT)</span
+                                                    >
+                                                </button>
+                                            </div>
+
+                                            <!-- Jadwalkan Buka Absen Otomatis Form -->
+                                            <div
+                                                class="pt-2 border-t border-slate-200 dark:border-slate-700/60"
+                                            >
+                                                <div
+                                                    class="flex items-center justify-between mb-1"
+                                                >
+                                                    <label
+                                                        class="block text-[10px] font-semibold text-slate-500"
+                                                    >
+                                                        Atau Jadwalkan Jam Buka
+                                                        Absen Otomatis:
+                                                    </label>
+                                                    <span
+                                                        class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400"
+                                                    >
+                                                        Durasi:
+                                                        {{
+                                                            unitSelectedDuration[
+                                                                mod.id
+                                                            ] || 30
+                                                        }}
+                                                        Menit
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    class="flex items-center gap-2"
+                                                >
+                                                    <input
+                                                        v-if="
+                                                            unitScheduledAttendanceForm[
+                                                                mod.id
+                                                            ]
+                                                        "
+                                                        v-model="
+                                                            unitScheduledAttendanceForm[
+                                                                mod.id
+                                                            ].scheduled_at
+                                                        "
+                                                        type="datetime-local"
+                                                        class="flex-1 text-xs px-2.5 py-1.5 border rounded-lg bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        @click="
+                                                            submitUnitScheduleAttendance(
+                                                                mod,
+                                                            )
+                                                        "
+                                                        class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm shrink-0"
+                                                        title="Jadwalkan jam buka absen otomatis"
+                                                    >
+                                                        <Clock
+                                                            class="w-3.5 h-3.5"
+                                                        />
+                                                        <span
+                                                            >Jadwalkan ({{
+                                                                unitSelectedDuration[
+                                                                    mod.id
+                                                                ] || 30
+                                                            }}
+                                                            Mnt)</span
+                                                        >
+                                                    </button>
+                                                </div>
+                                                <p
+                                                    v-if="
+                                                        mod.zoom_attendance_scheduled_at
+                                                    "
+                                                    class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-1"
+                                                >
+                                                    Tersimpan: Absen unit ini
+                                                    otomatis dibuka pada
+                                                    {{
+                                                        formatReadableDate(
+                                                            mod.zoom_attendance_scheduled_at,
+                                                        )
+                                                    }}
+                                                    selama
+                                                    {{
+                                                        mod.zoom_attendance_duration_minutes ||
+                                                        30
+                                                    }}
+                                                    menit.
+                                                </p>
+                                            </div>
                                         </div>
-                                        <p
-                                            v-if="
-                                                mod.zoom_attendance_scheduled_at
-                                            "
-                                            class="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-1"
-                                        >
-                                            Tersimpan: Absen unit ini otomatis
-                                            dibuka pada
-                                            {{
-                                                formatReadableDate(
-                                                    mod.zoom_attendance_scheduled_at,
-                                                )
-                                            }}
-                                            selama
-                                            {{
-                                                mod.zoom_attendance_duration_minutes ||
-                                                30
-                                            }}
-                                            menit.
-                                        </p>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
                             </template>
                         </div>
 
@@ -4073,19 +4340,42 @@ const uploadTemplateImage = (e) => {
                             v-else
                             class="p-4 mx-5 md:mx-6 my-4 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-900/40 rounded-xl flex items-center gap-3"
                         >
-                            <BookOpen class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                            <div class="text-xs text-emerald-800 dark:text-emerald-300">
-                                <span class="font-bold">Hari Pembelajaran Mandiri (Asinkronus):</span>
-                                Seluruh unit kompetensi pada hari ini diselesaikan oleh peserta secara mandiri melalui materi dan evaluasi di bawah.
+                            <BookOpen
+                                class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0"
+                            />
+                            <div
+                                class="text-xs text-emerald-800 dark:text-emerald-300"
+                            >
+                                <span class="font-bold"
+                                    >Hari Pembelajaran Mandiri
+                                    (Asinkronus):</span
+                                >
+                                Seluruh unit kompetensi pada hari ini
+                                diselesaikan oleh peserta secara mandiri melalui
+                                materi dan evaluasi di bawah.
                             </div>
                         </div>
 
                         <!-- Unit Cards belonging to this Day -->
-                        <div class="p-5 md:p-6 space-y-6 bg-white dark:bg-slate-900">
-                            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2.5">
-                                <h4 class="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                        <div
+                            class="p-5 md:p-6 space-y-6 bg-white dark:bg-slate-900"
+                        >
+                            <div
+                                class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-2.5"
+                            >
+                                <h4
+                                    class="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-2"
+                                >
                                     <Layers class="w-4 h-4 text-indigo-500" />
-                                    <span>Daftar Unit Kompetensi Hari Ke-{{ dayGroup.day_number }} ({{ dayGroup.modules.length }} Unit)</span>
+                                    <span
+                                        >Daftar Unit Kompetensi Hari Ke-{{
+                                            dayGroup.day_number
+                                        }}
+                                        ({{
+                                            dayGroup.modules.length
+                                        }}
+                                        Unit)</span
+                                    >
                                 </h4>
                             </div>
 
@@ -4095,429 +4385,511 @@ const uploadTemplateImage = (e) => {
                                 class="bg-slate-50/60 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 md:p-6 space-y-5 transition shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700"
                             >
                                 <!-- Unit Header Bar -->
-                        <div
-                            class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4"
-                        >
-                            <div class="flex items-start gap-3">
-                                <span
-                                    class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black shrink-0 tracking-wider shadow-sm"
-                                >
-                                    Unit {{ getOverallModuleIndex(mod) }}
-                                </span>
-                                <div>
-                                    <div
-                                        class="flex flex-wrap items-center gap-2"
-                                    >
-                                        <span
-                                            class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded"
-                                        >
-                                            Unit Kompetensi {{ getOverallModuleIndex(mod) }}
-                                        </span>
-                                        <span
-                                            v-if="
-                                                mod.delivery_mode ===
-                                                'sinkronus'
-                                            "
-                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            <Video
-                                                class="w-3 h-3 text-blue-500"
-                                            />
-                                            <span
-                                                >Sinkronus (Live Online
-                                                Meeting)</span
-                                            >
-                                            <span v-if="mod.scheduled_date"
-                                                >&bull;
-                                                {{
-                                                    formatDateIndo(
-                                                        mod.scheduled_date,
-                                                    )
-                                                }}</span
-                                            >
-                                            <span
-                                                v-if="
-                                                    mod.start_time &&
-                                                    mod.end_time
-                                                "
-                                                >({{ mod.start_time }} -
-                                                {{ mod.end_time }})</span
-                                            >
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            <BookOpen
-                                                class="w-3 h-3 text-emerald-500"
-                                            />
-                                            <span
-                                                >Asinkronus &bull;
-                                                {{ mod.duration_days || 1 }}
-                                                Hari</span
-                                            >
-                                        </span>
-                                        <span
-                                            v-if="
-                                                (mod.quizzes?.length ||
-                                                    (mod.quiz ? 1 : 0)) > 0
-                                            "
-                                            class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            <HelpCircle
-                                                class="w-3 h-3 text-amber-500"
-                                            />
-                                            <span
-                                                >{{
-                                                    mod.quizzes?.length || 1
-                                                }}
-                                                Kuis</span
-                                            >
-                                        </span>
-                                        <span
-                                            v-else
-                                            class="text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full"
-                                        >
-                                            Tanpa Kuis
-                                        </span>
-                                    </div>
-                                    <h3
-                                        class="text-base font-bold text-slate-900 dark:text-white mt-1"
-                                    >
-                                        {{ mod.title }}
-                                    </h3>
-                                    <p
-                                        v-if="mod.description"
-                                        class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"
-                                    >
-                                        {{ mod.description }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Unit Actions: + Lesson, Quiz, Edit, Delete -->
-                            <div
-                                class="flex items-center gap-2 self-start lg:self-center flex-wrap"
-                            >
-                                <button
-                                    type="button"
-                                    @click="openAddLessonModal(mod.id)"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-lg text-xs font-bold transition"
-                                >
-                                    <Plus class="w-3.5 h-3.5" />
-                                    <span>+ Elemen</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="openQuizModal(mod, null)"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
-                                >
-                                    <HelpCircle
-                                        class="w-3.5 h-3.5 text-amber-500"
-                                    />
-                                    <span>+ Kuis</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="openEditModuleModal(mod)"
-                                    class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
-                                    title="Edit Unit Kompetensi"
-                                >
-                                    <Edit class="w-4 h-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    @click="deleteModule(mod)"
-                                    :disabled="deletingModuleId === mod.id"
-                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition disabled:opacity-50"
-                                    title="Hapus Unit Kompetensi"
-                                >
-                                    <Loader2
-                                        v-if="deletingModuleId === mod.id"
-                                        class="w-4 h-4 animate-spin text-rose-600"
-                                    />
-                                    <Trash2 v-else class="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                                <!-- Elemen Kompetensi (Lessons) List under this Unit -->
-                        <div
-                            class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2"
-                        >
-                            <div class="flex items-center justify-between">
-                                <h5
-                                    class="text-xs font-bold uppercase tracking-wider text-slate-500"
-                                >
-                                    Elemen Kompetensi (Materi) &bull;
-                                    {{ mod.lessons?.length || 0 }} Elemen
-                                </h5>
-                                <button
-                                    type="button"
-                                    @click="openAddLessonModal(mod.id)"
-                                    class="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline"
-                                >
-                                    <Plus class="w-3.5 h-3.5" />
-                                    <span>Tambah Elemen Kompetensi</span>
-                                </button>
-                            </div>
-
-                            <div
-                                v-if="mod.lessons && mod.lessons.length > 0"
-                                class="divide-y divide-slate-100 dark:divide-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/20"
-                            >
                                 <div
-                                    v-for="(lesson, lesIdx) in mod.lessons"
-                                    :key="lesson.id"
-                                    class="px-4 py-2.5 flex items-center justify-between hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                                    class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4"
                                 >
-                                    <div class="flex items-center gap-3">
+                                    <div class="flex items-start gap-3">
                                         <span
-                                            class="text-xs font-bold text-slate-400 w-6 text-right shrink-0"
+                                            class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-black shrink-0 tracking-wider shadow-sm"
                                         >
-                                            {{ getOverallModuleIndex(mod) }}.{{ lesIdx + 1 }}
-                                        </span>
-                                        <span
-                                            class="p-1.5 rounded-lg shrink-0"
-                                            :class="{
-                                                'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400':
-                                                    lesson.content_type ===
-                                                    'video',
-                                                'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400':
-                                                    lesson.content_type ===
-                                                    'article',
-                                                'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400':
-                                                    lesson.content_type ===
-                                                    'image',
-                                                'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400':
-                                                    lesson.content_type ===
-                                                    'pdf',
-                                            }"
-                                        >
-                                            <Video
-                                                v-if="
-                                                    lesson.content_type ===
-                                                    'video'
-                                                "
-                                                class="w-3.5 h-3.5"
-                                            />
-                                            <FileText
-                                                v-else-if="
-                                                    lesson.content_type ===
-                                                    'article'
-                                                "
-                                                class="w-3.5 h-3.5"
-                                            />
-                                            <ImageIcon
-                                                v-else-if="
-                                                    lesson.content_type ===
-                                                    'image'
-                                                "
-                                                class="w-3.5 h-3.5"
-                                            />
-                                            <BookOpen
-                                                v-else
-                                                class="w-3.5 h-3.5"
-                                            />
-                                        </span>
-                                        <div>
-                                            <p
-                                                class="text-xs font-bold text-slate-800 dark:text-slate-200"
-                                            >
-                                                {{ lesson.title }}
-                                            </p>
-                                            <span
-                                                class="text-[10px] text-slate-400"
-                                            >
-                                                {{
-                                                    lesson.estimated_duration_minutes
-                                                }}
-                                                menit &bull; Tipe:
-                                                {{
-                                                    lesson.content_type ===
-                                                    "article"
-                                                        ? "Artikel Teks"
-                                                        : lesson.content_type ===
-                                                            "video"
-                                                          ? "Video"
-                                                          : lesson.content_type ===
-                                                              "pdf"
-                                                            ? "Dokumen PDF / Slide"
-                                                            : "Gambar"
-                                                }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="flex items-center gap-1.5">
-                                        <button
-                                            type="button"
-                                            @click="openEditLessonModal(lesson)"
-                                            class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
-                                            title="Edit Elemen Kompetensi"
-                                        >
-                                            <Edit class="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click="deleteLesson(lesson)"
-                                            :disabled="deletingLessonId === lesson.id"
-                                            class="p-1 text-slate-300 hover:text-rose-600 rounded disabled:opacity-50"
-                                            title="Hapus Elemen Kompetensi"
-                                        >
-                                            <Loader2
-                                                v-if="deletingLessonId === lesson.id"
-                                                class="w-3.5 h-3.5 animate-spin text-rose-600"
-                                            />
-                                            <Trash2 v-else class="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div
-                                v-else
-                                class="p-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-400"
-                            >
-                                Belum ada elemen kompetensi di unit ini.
-                                <button
-                                    type="button"
-                                    @click="openAddLessonModal(mod.id)"
-                                    class="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-1"
-                                >
-                                    + Tambah Sekarang
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Evaluasi / Kuis Pemahaman Unit Kompetensi (Bisa Lebih dari 1 Kuis) -->
-                        <div
-                            class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2"
-                        >
-                            <div class="flex items-center justify-between">
-                                <h5
-                                    class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5"
-                                >
-                                    <HelpCircle
-                                        class="w-3.5 h-3.5 text-amber-500"
-                                    />
-                                    <span>
-                                        Kuis Pemahaman Unit &bull;
-                                        {{
-                                            mod.quizzes?.length ||
-                                            (mod.quiz ? 1 : 0)
-                                        }}
-                                        Kuis
-                                    </span>
-                                </h5>
-                                <button
-                                    type="button"
-                                    @click="openQuizModal(mod, null)"
-                                    class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-800 dark:text-amber-400 hover:underline"
-                                >
-                                    <Plus class="w-3.5 h-3.5" />
-                                    <span>Tambah Kuis Baru</span>
-                                </button>
-                            </div>
-
-                            <!-- List of Quizzes in this Unit -->
-                            <div
-                                v-if="
-                                    (mod.quizzes && mod.quizzes.length > 0) ||
-                                    mod.quiz
-                                "
-                                class="divide-y divide-slate-100 dark:divide-slate-800/60 border border-amber-200/60 dark:border-amber-900/40 rounded-xl overflow-hidden bg-amber-50/20 dark:bg-amber-950/10"
-                            >
-                                <div
-                                    v-for="(qz, qzIdx) in mod.quizzes &&
-                                    mod.quizzes.length > 0
-                                        ? mod.quizzes
-                                        : [mod.quiz]"
-                                    :key="qz.id"
-                                    class="px-4 py-3 flex flex-wrap items-center justify-between gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
-                                >
-                                    <div class="flex items-center gap-3">
-                                        <span
-                                            class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center justify-center shrink-0"
-                                        >
-                                            Q{{ qzIdx + 1 }}
+                                            Unit
+                                            {{ getOverallModuleIndex(mod) }}
                                         </span>
                                         <div>
                                             <div
-                                                class="flex items-center gap-2"
+                                                class="flex flex-wrap items-center gap-2"
                                             >
-                                                <p
-                                                    class="text-xs font-bold text-slate-800 dark:text-slate-200"
-                                                >
-                                                    {{ qz.title }}
-                                                </p>
                                                 <span
-                                                    class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                                                    class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded"
                                                 >
-                                                    KKM: {{ qz.passing_score }}%
+                                                    Unit Kompetensi
+                                                    {{
+                                                        getOverallModuleIndex(
+                                                            mod,
+                                                        )
+                                                    }}
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        mod.delivery_mode ===
+                                                        'sinkronus'
+                                                    "
+                                                    class="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full"
+                                                >
+                                                    <Video
+                                                        class="w-3 h-3 text-blue-500"
+                                                    />
+                                                    <span
+                                                        >Sinkronus (Live Online
+                                                        Meeting)</span
+                                                    >
+                                                    <span
+                                                        v-if="
+                                                            mod.scheduled_date
+                                                        "
+                                                        >&bull;
+                                                        {{
+                                                            formatDateIndo(
+                                                                mod.scheduled_date,
+                                                            )
+                                                        }}</span
+                                                    >
+                                                    <span
+                                                        v-if="
+                                                            mod.start_time &&
+                                                            mod.end_time
+                                                        "
+                                                        >({{ mod.start_time }} -
+                                                        {{
+                                                            mod.end_time
+                                                        }})</span
+                                                    >
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-full"
+                                                >
+                                                    <BookOpen
+                                                        class="w-3 h-3 text-emerald-500"
+                                                    />
+                                                    <span
+                                                        >Asinkronus &bull;
+                                                        {{
+                                                            mod.duration_days ||
+                                                            1
+                                                        }}
+                                                        Hari</span
+                                                    >
+                                                </span>
+                                                <span
+                                                    v-if="
+                                                        (mod.quizzes?.length ||
+                                                            (mod.quiz
+                                                                ? 1
+                                                                : 0)) > 0
+                                                    "
+                                                    class="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 rounded-full"
+                                                >
+                                                    <HelpCircle
+                                                        class="w-3 h-3 text-amber-500"
+                                                    />
+                                                    <span
+                                                        >{{
+                                                            mod.quizzes
+                                                                ?.length || 1
+                                                        }}
+                                                        Kuis</span
+                                                    >
+                                                </span>
+                                                <span
+                                                    v-else
+                                                    class="text-[10px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full"
+                                                >
+                                                    Tanpa Kuis
                                                 </span>
                                             </div>
-                                            <p
-                                                class="text-[11px] text-slate-400 mt-0.5"
+                                            <h3
+                                                class="text-base font-bold text-slate-900 dark:text-white mt-1"
                                             >
-                                                {{ qz.questions?.length || 0 }}
-                                                Butir Soal &bull;
-                                                {{
-                                                    qz.time_limit_minutes
-                                                        ? qz.time_limit_minutes +
-                                                          " Menit"
-                                                        : "Tanpa Batas Waktu"
-                                                }}
+                                                {{ mod.title }}
+                                            </h3>
+                                            <p
+                                                v-if="mod.description"
+                                                class="text-xs text-slate-500 dark:text-slate-400 mt-0.5"
+                                            >
+                                                {{ mod.description }}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center gap-2">
+                                    <!-- Unit Actions: + Lesson, Quiz, Edit, Delete -->
+                                    <div
+                                        class="flex items-center gap-2 self-start lg:self-center flex-wrap"
+                                    >
                                         <button
                                             type="button"
-                                            @click="openQuizModal(mod, qz)"
-                                            class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                                            @click="openAddLessonModal(mod.id)"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 rounded-lg text-xs font-bold transition"
                                         >
-                                            <Edit class="w-3.5 h-3.5" />
-                                            <span>Kelola Soal & Kuis</span>
+                                            <Plus class="w-3.5 h-3.5" />
+                                            <span>+ Elemen</span>
                                         </button>
                                         <button
                                             type="button"
-                                            @click="deleteQuiz(qz)"
-                                            :disabled="deletingQuizId === qz.id"
-                                            class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition disabled:opacity-50"
-                                            title="Hapus Kuis Ini"
+                                            @click="openQuizModal(mod, null)"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition bg-amber-50 hover:bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                                        >
+                                            <HelpCircle
+                                                class="w-3.5 h-3.5 text-amber-500"
+                                            />
+                                            <span>+ Kuis</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="openEditModuleModal(mod)"
+                                            class="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
+                                            title="Edit Unit Kompetensi"
+                                        >
+                                            <Edit class="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            @click="deleteModule(mod)"
+                                            :disabled="
+                                                deletingModuleId === mod.id
+                                            "
+                                            class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-lg transition disabled:opacity-50"
+                                            title="Hapus Unit Kompetensi"
                                         >
                                             <Loader2
-                                                v-if="deletingQuizId === qz.id"
+                                                v-if="
+                                                    deletingModuleId === mod.id
+                                                "
                                                 class="w-4 h-4 animate-spin text-rose-600"
                                             />
                                             <Trash2 v-else class="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-
-                            <div
-                                v-else
-                                class="p-3.5 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-400"
-                            >
-                                Belum ada kuis di unit kompetensi ini
-                                (opsional).
-                                <button
-                                    type="button"
-                                    @click="openQuizModal(mod, null)"
-                                    class="text-amber-600 dark:text-amber-400 font-bold hover:underline ml-1"
+                                <!-- Elemen Kompetensi (Lessons) List under this Unit -->
+                                <div
+                                    class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2"
                                 >
-                                    + Tambah Kuis
-                                </button>
-                            </div>
-                        </div>
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <h5
+                                            class="text-xs font-bold uppercase tracking-wider text-slate-500"
+                                        >
+                                            Elemen Kompetensi (Materi) &bull;
+                                            {{
+                                                mod.lessons?.length || 0
+                                            }}
+                                            Elemen
+                                        </h5>
+                                        <button
+                                            type="button"
+                                            @click="openAddLessonModal(mod.id)"
+                                            class="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 hover:underline"
+                                        >
+                                            <Plus class="w-3.5 h-3.5" />
+                                            <span
+                                                >Tambah Elemen Kompetensi</span
+                                            >
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        v-if="
+                                            mod.lessons &&
+                                            mod.lessons.length > 0
+                                        "
+                                        class="divide-y divide-slate-100 dark:divide-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/20"
+                                    >
+                                        <div
+                                            v-for="(
+                                                lesson, lesIdx
+                                            ) in mod.lessons"
+                                            :key="lesson.id"
+                                            class="px-4 py-2.5 flex items-center justify-between hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                                        >
+                                            <div
+                                                class="flex items-center gap-3"
+                                            >
+                                                <span
+                                                    class="text-xs font-bold text-slate-400 w-6 text-right shrink-0"
+                                                >
+                                                    {{
+                                                        getOverallModuleIndex(
+                                                            mod,
+                                                        )
+                                                    }}.{{ lesIdx + 1 }}
+                                                </span>
+                                                <span
+                                                    class="p-1.5 rounded-lg shrink-0"
+                                                    :class="{
+                                                        'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400':
+                                                            lesson.content_type ===
+                                                            'video',
+                                                        'bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400':
+                                                            lesson.content_type ===
+                                                            'article',
+                                                        'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400':
+                                                            lesson.content_type ===
+                                                            'image',
+                                                        'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400':
+                                                            lesson.content_type ===
+                                                            'pdf',
+                                                    }"
+                                                >
+                                                    <Video
+                                                        v-if="
+                                                            lesson.content_type ===
+                                                            'video'
+                                                        "
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    <FileText
+                                                        v-else-if="
+                                                            lesson.content_type ===
+                                                            'article'
+                                                        "
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    <ImageIcon
+                                                        v-else-if="
+                                                            lesson.content_type ===
+                                                            'image'
+                                                        "
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                    <BookOpen
+                                                        v-else
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                </span>
+                                                <div>
+                                                    <p
+                                                        class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                                                    >
+                                                        {{ lesson.title }}
+                                                    </p>
+                                                    <span
+                                                        class="text-[10px] text-slate-400"
+                                                    >
+                                                        {{
+                                                            lesson.estimated_duration_minutes
+                                                        }}
+                                                        menit &bull; Tipe:
+                                                        {{
+                                                            lesson.content_type ===
+                                                            "article"
+                                                                ? "Artikel Teks"
+                                                                : lesson.content_type ===
+                                                                    "video"
+                                                                  ? "Video"
+                                                                  : lesson.content_type ===
+                                                                      "pdf"
+                                                                    ? "Dokumen PDF / Slide"
+                                                                    : "Gambar"
+                                                        }}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                class="flex items-center gap-1.5"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        openEditLessonModal(
+                                                            lesson,
+                                                        )
+                                                    "
+                                                    class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
+                                                    title="Edit Elemen Kompetensi"
+                                                >
+                                                    <Edit class="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        deleteLesson(lesson)
+                                                    "
+                                                    :disabled="
+                                                        deletingLessonId ===
+                                                        lesson.id
+                                                    "
+                                                    class="p-1 text-slate-300 hover:text-rose-600 rounded disabled:opacity-50"
+                                                    title="Hapus Elemen Kompetensi"
+                                                >
+                                                    <Loader2
+                                                        v-if="
+                                                            deletingLessonId ===
+                                                            lesson.id
+                                                        "
+                                                        class="w-3.5 h-3.5 animate-spin text-rose-600"
+                                                    />
+                                                    <Trash2
+                                                        v-else
+                                                        class="w-3.5 h-3.5"
+                                                    />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-else
+                                        class="p-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-400"
+                                    >
+                                        Belum ada elemen kompetensi di unit ini.
+                                        <button
+                                            type="button"
+                                            @click="openAddLessonModal(mod.id)"
+                                            class="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-1"
+                                        >
+                                            + Tambah Sekarang
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Evaluasi / Kuis Pemahaman Unit Kompetensi (Bisa Lebih dari 1 Kuis) -->
+                                <div
+                                    class="border-t border-slate-100 dark:border-slate-800 pt-3 space-y-2"
+                                >
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
+                                        <h5
+                                            class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5"
+                                        >
+                                            <HelpCircle
+                                                class="w-3.5 h-3.5 text-amber-500"
+                                            />
+                                            <span>
+                                                Kuis Pemahaman Unit &bull;
+                                                {{
+                                                    mod.quizzes?.length ||
+                                                    (mod.quiz ? 1 : 0)
+                                                }}
+                                                Kuis
+                                            </span>
+                                        </h5>
+                                        <button
+                                            type="button"
+                                            @click="openQuizModal(mod, null)"
+                                            class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-800 dark:text-amber-400 hover:underline"
+                                        >
+                                            <Plus class="w-3.5 h-3.5" />
+                                            <span>Tambah Kuis Baru</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- List of Quizzes in this Unit -->
+                                    <div
+                                        v-if="
+                                            (mod.quizzes &&
+                                                mod.quizzes.length > 0) ||
+                                            mod.quiz
+                                        "
+                                        class="divide-y divide-slate-100 dark:divide-slate-800/60 border border-amber-200/60 dark:border-amber-900/40 rounded-xl overflow-hidden bg-amber-50/20 dark:bg-amber-950/10"
+                                    >
+                                        <div
+                                            v-for="(qz, qzIdx) in mod.quizzes &&
+                                            mod.quizzes.length > 0
+                                                ? mod.quizzes
+                                                : [mod.quiz]"
+                                            :key="qz.id"
+                                            class="px-4 py-3 flex flex-wrap items-center justify-between gap-3 hover:bg-white dark:hover:bg-slate-800/60 transition-colors"
+                                        >
+                                            <div
+                                                class="flex items-center gap-3"
+                                            >
+                                                <span
+                                                    class="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center justify-center shrink-0"
+                                                >
+                                                    Q{{ qzIdx + 1 }}
+                                                </span>
+                                                <div>
+                                                    <div
+                                                        class="flex items-center gap-2"
+                                                    >
+                                                        <p
+                                                            class="text-xs font-bold text-slate-800 dark:text-slate-200"
+                                                        >
+                                                            {{ qz.title }}
+                                                        </p>
+                                                        <span
+                                                            class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
+                                                        >
+                                                            KKM:
+                                                            {{
+                                                                qz.passing_score
+                                                            }}%
+                                                        </span>
+                                                    </div>
+                                                    <p
+                                                        class="text-[11px] text-slate-400 mt-0.5"
+                                                    >
+                                                        {{
+                                                            qz.questions
+                                                                ?.length || 0
+                                                        }}
+                                                        Butir Soal &bull;
+                                                        {{
+                                                            qz.time_limit_minutes
+                                                                ? qz.time_limit_minutes +
+                                                                  " Menit"
+                                                                : "Tanpa Batas Waktu"
+                                                        }}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <button
+                                                    type="button"
+                                                    @click="
+                                                        openQuizModal(mod, qz)
+                                                    "
+                                                    class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm"
+                                                >
+                                                    <Edit class="w-3.5 h-3.5" />
+                                                    <span
+                                                        >Kelola Soal &
+                                                        Kuis</span
+                                                    >
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="deleteQuiz(qz)"
+                                                    :disabled="
+                                                        deletingQuizId === qz.id
+                                                    "
+                                                    class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-lg transition disabled:opacity-50"
+                                                    title="Hapus Kuis Ini"
+                                                >
+                                                    <Loader2
+                                                        v-if="
+                                                            deletingQuizId ===
+                                                            qz.id
+                                                        "
+                                                        class="w-4 h-4 animate-spin text-rose-600"
+                                                    />
+                                                    <Trash2
+                                                        v-else
+                                                        class="w-4 h-4"
+                                                    />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-else
+                                        class="p-3.5 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 text-xs text-slate-400"
+                                    >
+                                        Belum ada kuis di unit kompetensi ini
+                                        (opsional).
+                                        <button
+                                            type="button"
+                                            @click="openQuizModal(mod, null)"
+                                            class="text-amber-600 dark:text-amber-400 font-bold hover:underline ml-1"
+                                        >
+                                            + Tambah Kuis
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                    <!-- Empty State if No Modules in course at all -->
+                <!-- Empty State if No Modules in course at all -->
                 <div
                     v-else-if="!course.modules || course.modules.length === 0"
                     class="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-10 text-center"
@@ -4882,6 +5254,9 @@ const uploadTemplateImage = (e) => {
                                         </div>
                                     </th>
                                     <th class="px-4 py-3">Sertifikat</th>
+                                    <th class="px-4 py-3 whitespace-nowrap">
+                                        Surat Pernyataan
+                                    </th>
                                     <th class="px-4 py-3 text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -5216,6 +5591,44 @@ const uploadTemplateImage = (e) => {
                                             >-</span
                                         >
                                     </td>
+                                    <td class="px-4 py-3 whitespace-nowrap">
+                                        <div
+                                            v-if="
+                                                e.declaration_letter_path ||
+                                                e.declaration_signed_at ||
+                                                e.status === 'completed'
+                                            "
+                                            class="space-y-1"
+                                        >
+                                            <button
+                                                type="button"
+                                                @click="openDeclarationModal(e)"
+                                                class="text-sky-600 hover:text-sky-800 dark:text-sky-400 font-semibold inline-flex items-center gap-1.5 text-xs bg-sky-50 dark:bg-sky-950/50 hover:bg-sky-100 dark:hover:bg-sky-900/60 px-2.5 py-1 rounded-lg border border-sky-200 dark:border-sky-800 transition cursor-pointer"
+                                                title="Lihat & Unduh Surat Pernyataan"
+                                            >
+                                                <FileText
+                                                    class="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0"
+                                                />
+                                                <span>Lihat Surat</span>
+                                            </button>
+                                            <p
+                                                v-if="e.declaration_signed_at"
+                                                class="text-[10px] text-slate-400 font-medium"
+                                            >
+                                                {{
+                                                    formatDateIndo(
+                                                        e.declaration_signed_at,
+                                                    )
+                                                }}
+                                            </p>
+                                        </div>
+                                        <span
+                                            v-else
+                                            class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                                        >
+                                            Belum Ada
+                                        </span>
+                                    </td>
                                     <td class="px-4 py-3 text-center">
                                         <div
                                             class="flex items-center justify-center gap-1.5 flex-wrap"
@@ -5231,15 +5644,24 @@ const uploadTemplateImage = (e) => {
                                                             'live_zoom',
                                                         )
                                                     "
-                                                    :disabled="markingAttendanceEnrollmentId === `${e.id}_live_zoom`"
+                                                    :disabled="
+                                                        markingAttendanceEnrollmentId ===
+                                                        `${e.id}_live_zoom`
+                                                    "
                                                     class="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 rounded text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1 disabled:opacity-50"
                                                     title="Tandai Hadir Online Meeting & Terbitkan Sertifikat"
                                                 >
                                                     <Loader2
-                                                        v-if="markingAttendanceEnrollmentId === `${e.id}_live_zoom`"
+                                                        v-if="
+                                                            markingAttendanceEnrollmentId ===
+                                                            `${e.id}_live_zoom`
+                                                        "
                                                         class="w-3 h-3 animate-spin shrink-0"
                                                     />
-                                                    <span>+ Hadir Online Meeting</span>
+                                                    <span
+                                                        >+ Hadir Online
+                                                        Meeting</span
+                                                    >
                                                 </button>
                                                 <button
                                                     @click="
@@ -5248,12 +5670,18 @@ const uploadTemplateImage = (e) => {
                                                             'self_study',
                                                         )
                                                     "
-                                                    :disabled="markingAttendanceEnrollmentId === `${e.id}_self_study`"
+                                                    :disabled="
+                                                        markingAttendanceEnrollmentId ===
+                                                        `${e.id}_self_study`
+                                                    "
                                                     class="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1 disabled:opacity-50"
                                                     title="Tandai Lulus Mandiri & Terbitkan Sertifikat"
                                                 >
                                                     <Loader2
-                                                        v-if="markingAttendanceEnrollmentId === `${e.id}_self_study`"
+                                                        v-if="
+                                                            markingAttendanceEnrollmentId ===
+                                                            `${e.id}_self_study`
+                                                        "
                                                         class="w-3 h-3 animate-spin shrink-0"
                                                     />
                                                     <span>+ Lulus Mandiri</span>
@@ -5274,15 +5702,24 @@ const uploadTemplateImage = (e) => {
                                             </button>
                                             <button
                                                 @click="deleteEnrollment(e)"
-                                                :disabled="deletingEnrollmentId === e.id"
+                                                :disabled="
+                                                    deletingEnrollmentId ===
+                                                    e.id
+                                                "
                                                 class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 rounded-md transition disabled:opacity-50"
                                                 title="Keluarkan Peserta"
                                             >
                                                 <Loader2
-                                                    v-if="deletingEnrollmentId === e.id"
+                                                    v-if="
+                                                        deletingEnrollmentId ===
+                                                        e.id
+                                                    "
                                                     class="w-3.5 h-3.5 animate-spin text-rose-600"
                                                 />
-                                                <Trash2 v-else class="w-3.5 h-3.5" />
+                                                <Trash2
+                                                    v-else
+                                                    class="w-3.5 h-3.5"
+                                                />
                                             </button>
                                         </div>
                                     </td>
@@ -5291,7 +5728,7 @@ const uploadTemplateImage = (e) => {
                                 <tr v-if="filteredEnrollments.length === 0">
                                     <td
                                         :colspan="
-                                            11 + (course.modules?.length || 0)
+                                            12 + (course.modules?.length || 0)
                                         "
                                         class="px-4 py-8 text-center text-slate-400"
                                     >
@@ -5465,7 +5902,10 @@ const uploadTemplateImage = (e) => {
                             title="Simpan otomatis tata letak dan buka preview PDF sertifikat"
                             class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                         >
-                            <Loader2 v-if="isSavingCert" class="w-4 h-4 animate-spin shrink-0" />
+                            <Loader2
+                                v-if="isSavingCert"
+                                class="w-4 h-4 animate-spin shrink-0"
+                            />
                             <Eye v-else class="w-4 h-4" />
                             <span>{{
                                 isSavingCert
@@ -5479,7 +5919,10 @@ const uploadTemplateImage = (e) => {
                             :disabled="isSavingCert"
                             class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer disabled:opacity-50"
                         >
-                            <Loader2 v-if="isSavingCert" class="w-4 h-4 animate-spin shrink-0" />
+                            <Loader2
+                                v-if="isSavingCert"
+                                class="w-4 h-4 animate-spin shrink-0"
+                            />
                             <Save v-else class="w-4 h-4" />
                             <span>{{
                                 isSavingCert
@@ -7200,7 +7643,10 @@ const uploadTemplateImage = (e) => {
                             :disabled="isSavingCert"
                             class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                            <Loader2 v-if="isSavingCert" class="w-4 h-4 animate-spin shrink-0" />
+                            <Loader2
+                                v-if="isSavingCert"
+                                class="w-4 h-4 animate-spin shrink-0"
+                            />
                             <Save v-else class="w-4 h-4" />
                             <span>{{
                                 isSavingCert
@@ -7719,16 +8165,29 @@ const uploadTemplateImage = (e) => {
                                 @change="handleLessonMedia"
                                 class="w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-800 hover:file:bg-amber-200 dark:file:bg-amber-900/60 dark:file:text-amber-300"
                             />
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
-                                Format wajib PDF (maks. 50MB). Materi ini akan disajikan ke siswa dalam mode pembaca mirip buku/slide presentasi dengan proteksi wajib tuntas membaca hingga halaman terakhir serta fitur Full Screen.
+                            <p
+                                class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5"
+                            >
+                                Format wajib PDF (maks. 50MB). Materi ini akan
+                                disajikan ke siswa dalam mode pembaca mirip
+                                buku/slide presentasi dengan proteksi wajib
+                                tuntas membaca hingga halaman terakhir serta
+                                fitur Full Screen.
                             </p>
                             <div
                                 v-if="currentLessonMediaPath && isEditingLesson"
                                 class="mt-2 p-2 bg-white dark:bg-slate-900 rounded border border-amber-200 dark:border-amber-800 text-xs flex items-center justify-between"
                             >
-                                <span class="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate">
-                                    <FileText class="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                    <span class="truncate">File PDF saat ini tersimpan di server</span>
+                                <span
+                                    class="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 truncate"
+                                >
+                                    <FileText
+                                        class="w-3.5 h-3.5 text-amber-600 shrink-0"
+                                    />
+                                    <span class="truncate"
+                                        >File PDF saat ini tersimpan di
+                                        server</span
+                                    >
                                 </span>
                                 <a
                                     :href="'/storage/' + currentLessonMediaPath"
@@ -8177,6 +8636,73 @@ const uploadTemplateImage = (e) => {
                         </div>
                     </div>
 
+                    <!-- Surat Pernyataan Komitmen Bekerja -->
+                    <div
+                        class="p-3 rounded-xl border flex items-center justify-between gap-3"
+                        :class="
+                            editingEnrollment?.declaration_letter_path ||
+                            editingEnrollment?.declaration_signed_at ||
+                            editingEnrollment?.status === 'completed'
+                                ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800'
+                                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80'
+                        "
+                    >
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div
+                                class="p-2 rounded-lg shrink-0"
+                                :class="
+                                    editingEnrollment?.declaration_letter_path ||
+                                    editingEnrollment?.declaration_signed_at ||
+                                    editingEnrollment?.status === 'completed'
+                                        ? 'bg-sky-100 dark:bg-sky-900 text-sky-600 dark:text-sky-300'
+                                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                                "
+                            >
+                                <FileText class="w-4 h-4" />
+                            </div>
+                            <div class="min-w-0">
+                                <p
+                                    class="text-xs font-bold truncate"
+                                    :class="
+                                        editingEnrollment?.declaration_letter_path ||
+                                        editingEnrollment?.declaration_signed_at ||
+                                        editingEnrollment?.status ===
+                                            'completed'
+                                            ? 'text-sky-900 dark:text-sky-200'
+                                            : 'text-slate-700 dark:text-slate-300'
+                                    "
+                                >
+                                    Surat Pernyataan Komitmen Bekerja
+                                </p>
+                                <p
+                                    class="text-[10px] text-slate-500 dark:text-slate-400"
+                                >
+                                    {{
+                                        editingEnrollment?.declaration_signed_at
+                                            ? `Ditandatangani pada ${formatDateIndo(editingEnrollment.declaration_signed_at)}`
+                                            : editingEnrollment?.status ===
+                                                "completed"
+                                              ? "Dokumen terverifikasi selesai"
+                                              : "Belum menandatangani surat pernyataan komitmen Bekerja"
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            v-if="
+                                editingEnrollment?.declaration_letter_path ||
+                                editingEnrollment?.declaration_signed_at ||
+                                editingEnrollment?.status === 'completed'
+                            "
+                            type="button"
+                            @click="openDeclarationModal(editingEnrollment)"
+                            class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-xs shrink-0 cursor-pointer"
+                        >
+                            <Eye class="w-3.5 h-3.5" />
+                            <span>Lihat Surat</span>
+                        </button>
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold mb-1"
                             >Alamat Lengkap / Domisili</label
@@ -8213,6 +8739,135 @@ const uploadTemplateImage = (e) => {
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- Modal Preview Surat Pernyataan -->
+        <div
+            v-if="showDeclarationModal && selectedDeclarationEnrollment"
+            class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm"
+        >
+            <div
+                class="bg-white dark:bg-slate-900 rounded-2xl max-w-4xl w-full flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 h-[92vh] overflow-hidden"
+            >
+                <!-- Modal Header -->
+                <div
+                    class="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 shrink-0"
+                >
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div
+                            class="p-2.5 bg-sky-100 dark:bg-sky-950 text-sky-600 dark:text-sky-400 rounded-xl shrink-0"
+                        >
+                            <FileText class="w-5 h-5" />
+                        </div>
+                        <div class="min-w-0">
+                            <h3
+                                class="text-sm font-bold text-slate-900 dark:text-white truncate"
+                            >
+                                Surat Pernyataan Komitmen Bekerja
+                            </h3>
+                            <p
+                                class="text-xs text-slate-500 dark:text-slate-400 truncate"
+                            >
+                                Peserta:
+                                <strong
+                                    class="text-slate-800 dark:text-slate-200"
+                                    >{{
+                                        selectedDeclarationEnrollment
+                                            .participant?.name
+                                    }}</strong
+                                >
+                                <span class="mx-1.5">&bull;</span>
+                                NIK:
+                                <span class="font-mono">{{
+                                    selectedDeclarationEnrollment.participant
+                                        ?.nik || "-"
+                                }}</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <a
+                            :href="`/lms/declarations/${selectedDeclarationEnrollment.id}/view`"
+                            target="_blank"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg text-xs font-semibold shadow-xs transition"
+                            title="Buka PDF di Tab Baru"
+                        >
+                            <ExternalLink class="w-3.5 h-3.5" />
+                            <span class="hidden sm:inline">Tab Baru</span>
+                        </a>
+                        <a
+                            :href="`/lms/declarations/${selectedDeclarationEnrollment.id}/download`"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                            title="Unduh File PDF"
+                        >
+                            <Download class="w-3.5 h-3.5" />
+                            <span class="hidden sm:inline">Unduh PDF</span>
+                        </a>
+                        <button
+                            type="button"
+                            @click="closeDeclarationModal"
+                            class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                        >
+                            <X class="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body (PDF Viewer iframe) -->
+                <div
+                    class="flex-1 bg-slate-100 dark:bg-slate-950 p-2 sm:p-4 overflow-hidden flex flex-col"
+                >
+                    <iframe
+                        :src="`/lms/declarations/${selectedDeclarationEnrollment.id}/view`"
+                        class="w-full flex-1 rounded-xl bg-white shadow-inner border border-slate-200 dark:border-slate-800"
+                        title="Surat Pernyataan PDF Preview"
+                    ></iframe>
+                    <div
+                        class="mt-2 text-center text-xs text-slate-500 shrink-0 flex items-center justify-center gap-2"
+                    >
+                        <span>Kendala memuat pratinjau?</span>
+                        <a
+                            :href="`/lms/declarations/${selectedDeclarationEnrollment.id}/view`"
+                            target="_blank"
+                            class="text-sky-600 dark:text-sky-400 font-bold hover:underline"
+                        >
+                            Buka di Tab Baru
+                        </a>
+                        <span>atau</span>
+                        <a
+                            :href="`/lms/declarations/${selectedDeclarationEnrollment.id}/download`"
+                            class="text-sky-600 dark:text-sky-400 font-bold hover:underline"
+                        >
+                            Unduh File PDF Langsung
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div
+                    class="px-5 py-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 shrink-0"
+                >
+                    <span class="truncate">
+                        Status:
+                        <span
+                            class="font-bold text-emerald-600 dark:text-emerald-400"
+                        >
+                            {{
+                                selectedDeclarationEnrollment.declaration_signed_at
+                                    ? `Telah ditandatangani pada ${formatDateIndo(selectedDeclarationEnrollment.declaration_signed_at)}`
+                                    : "Dokumen Resmi LMS"
+                            }}
+                        </span>
+                    </span>
+                    <button
+                        type="button"
+                        @click="closeDeclarationModal"
+                        class="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition cursor-pointer"
+                    >
+                        Tutup
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -8278,7 +8933,9 @@ const uploadTemplateImage = (e) => {
                         </button>
                         <button
                             type="submit"
-                            :disabled="importForm.processing || !importForm.file"
+                            :disabled="
+                                importForm.processing || !importForm.file
+                            "
                             class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 inline-flex items-center gap-2"
                         >
                             <Loader2
@@ -8542,7 +9199,11 @@ const uploadTemplateImage = (e) => {
                                 <button
                                     v-if="activeQuiz || activeQuizModule?.quiz"
                                     type="button"
-                                    :disabled="deletingQuizId === (activeQuiz?.id || activeQuizModule?.quiz?.id)"
+                                    :disabled="
+                                        deletingQuizId ===
+                                        (activeQuiz?.id ||
+                                            activeQuizModule?.quiz?.id)
+                                    "
                                     @click="
                                         deleteQuiz(
                                             activeQuiz ||
@@ -8552,7 +9213,11 @@ const uploadTemplateImage = (e) => {
                                     class="text-xs font-semibold text-rose-600 hover:text-rose-700 underline inline-flex items-center gap-1 disabled:opacity-50"
                                 >
                                     <Loader2
-                                        v-if="deletingQuizId === (activeQuiz?.id || activeQuizModule?.quiz?.id)"
+                                        v-if="
+                                            deletingQuizId ===
+                                            (activeQuiz?.id ||
+                                                activeQuizModule?.quiz?.id)
+                                        "
                                         class="w-3.5 h-3.5 animate-spin"
                                     />
                                     <span>Hapus Kuis Ini</span>
@@ -8648,15 +9313,22 @@ const uploadTemplateImage = (e) => {
                                         <button
                                             type="button"
                                             @click="deleteQuestion(q)"
-                                            :disabled="deletingQuestionId === q.id"
+                                            :disabled="
+                                                deletingQuestionId === q.id
+                                            "
                                             class="p-1 text-slate-400 hover:text-rose-600 rounded disabled:opacity-50"
                                             title="Hapus Soal"
                                         >
                                             <Loader2
-                                                v-if="deletingQuestionId === q.id"
+                                                v-if="
+                                                    deletingQuestionId === q.id
+                                                "
                                                 class="w-3.5 h-3.5 animate-spin text-rose-600"
                                             />
-                                            <Trash2 v-else class="w-3.5 h-3.5" />
+                                            <Trash2
+                                                v-else
+                                                class="w-3.5 h-3.5"
+                                            />
                                         </button>
                                     </div>
                                 </div>

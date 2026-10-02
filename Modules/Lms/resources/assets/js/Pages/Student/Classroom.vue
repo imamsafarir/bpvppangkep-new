@@ -389,7 +389,9 @@ onMounted(() => {
         } else if (props.course.is_attendance_open_now) {
             let isStillOpen = false;
             if (props.course.zoom_attendance_closed_at) {
-                isStillOpen = now <= new Date(props.course.zoom_attendance_closed_at).getTime();
+                isStillOpen =
+                    now <=
+                    new Date(props.course.zoom_attendance_closed_at).getTime();
             }
             if (!isStillOpen) {
                 props.course.is_attendance_open_now = false;
@@ -689,6 +691,67 @@ const submitCompleteCourse = () => {
 };
 
 const submitSelfStudyAttendance = submitCompleteCourse;
+
+// Declaration Letter Modal
+const showDeclarationModal = ref(false);
+const declarationInput = ref("");
+const declarationError = ref("");
+const isSubmittingDeclaration = ref(false);
+
+const openDeclarationModal = () => {
+    if (allLessons.value.length === 0) {
+        alert("Belum ada unit & elemen kompetensi yang tersedia di kelas ini.");
+        return;
+    }
+    if (currentProgress.value < 100) {
+        alert(
+            "Anda harus menyelesaikan seluruh unit & elemen kompetensi (100%) terlebih dahulu.",
+        );
+        return;
+    }
+    declarationInput.value = "";
+    declarationError.value = "";
+    showDeclarationModal.value = true;
+};
+
+const submitDeclaration = async () => {
+    if (declarationInput.value.trim().toLowerCase() !== "saya siap bekerja") {
+        declarationError.value =
+            'Ketik tepat "saya siap bekerja" untuk melanjutkan.';
+        return;
+    }
+
+    isSubmittingDeclaration.value = true;
+    declarationError.value = "";
+
+    try {
+        const response = await axios.post(
+            `/lms/courses/${props.course.id}/declaration`,
+            {
+                confirmation_text: declarationInput.value.trim(),
+            },
+        );
+
+        if (response.data.success) {
+            showDeclarationModal.value = false;
+            // Reload the page to reflect completed status
+            router.reload({ preserveScroll: true });
+        }
+    } catch (err) {
+        declarationError.value =
+            err.response?.data?.message ||
+            err.response?.data?.error ||
+            "Terjadi kesalahan. Silakan coba lagi.";
+    } finally {
+        isSubmittingDeclaration.value = false;
+    }
+};
+
+const closeDeclarationModal = () => {
+    showDeclarationModal.value = false;
+    declarationInput.value = "";
+    declarationError.value = "";
+};
 
 // Helper YouTube Embed
 const getYoutubeEmbedUrl = (url) => {
@@ -2356,7 +2419,7 @@ const getYoutubeEmbedUrl = (url) => {
                                                 currentProgress >= 100 &&
                                                 allLessons.length > 0
                                             "
-                                            @click="submitCompleteCourse"
+                                            @click="openDeclarationModal"
                                             :disabled="isAttending"
                                             class="w-full py-3.5 px-3 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-600/30 transition-all animate-pulse flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                                         >
@@ -2796,7 +2859,7 @@ const getYoutubeEmbedUrl = (url) => {
                                                     enrollment.status !==
                                                         'completed'
                                                 "
-                                                @click="submitCompleteCourse"
+                                                @click="openDeclarationModal"
                                                 :disabled="isAttending"
                                                 class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse disabled:opacity-50"
                                             >
@@ -3073,7 +3136,7 @@ const getYoutubeEmbedUrl = (url) => {
                                                 enrollment.status !==
                                                     'completed'
                                             "
-                                            @click="submitCompleteCourse"
+                                            @click="openDeclarationModal"
                                             :disabled="isAttending"
                                             class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 transition-all animate-pulse cursor-pointer disabled:opacity-50"
                                         >
@@ -3104,5 +3167,207 @@ const getYoutubeEmbedUrl = (url) => {
                 </div>
             </div>
         </main>
+
+        <!-- DECLARATION LETTER MODAL -->
+        <Teleport to="body">
+            <div
+                v-if="showDeclarationModal"
+                class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+            >
+                <!-- Backdrop -->
+                <div
+                    class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                    @click="closeDeclarationModal"
+                ></div>
+
+                <!-- Modal Content -->
+                <div
+                    class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-700"
+                >
+                    <!-- Header -->
+                    <div
+                        class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-6 py-4 rounded-t-2xl z-10"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="p-2 bg-sky-100 dark:bg-sky-900/50 rounded-xl"
+                            >
+                                <FileText
+                                    class="w-5 h-5 text-sky-600 dark:text-sky-400"
+                                />
+                            </div>
+                            <div>
+                                <h3
+                                    class="text-base font-bold text-slate-900 dark:text-white"
+                                >
+                                    Surat Pernyataan Komitmen Bekerja
+                                </h3>
+                                <p
+                                    class="text-[11px] text-slate-500 dark:text-slate-400"
+                                >
+                                    Wajib disetujui sebelum menyelesaikan
+                                    pelatihan
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="px-6 py-5 space-y-4">
+                        <!-- Formal Letter Content -->
+                        <div
+                            class="p-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl space-y-3"
+                        >
+                            <div class="text-center space-y-1">
+                                <p
+                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
+                                >
+                                    Balai Pelatihan Vokasi dan Produktivitas
+                                </p>
+                                <h4
+                                    class="text-sm font-black text-slate-800 dark:text-white"
+                                >
+                                    SURAT PERNYATAAN KOMITMEN BEKERJA
+                                </h4>
+                                <div
+                                    class="w-16 h-0.5 bg-slate-300 dark:bg-slate-600 mx-auto mt-1"
+                                ></div>
+                            </div>
+
+                            <div
+                                class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed space-y-2"
+                            >
+                                <p>Yang bertanda tangan di bawah ini:</p>
+
+                                <div class="pl-3 space-y-1">
+                                    <p>
+                                        <span
+                                            class="text-slate-400 w-20 inline-block"
+                                            >Nama</span
+                                        >
+                                        <span class="font-bold"
+                                            >: {{ participant.name }}</span
+                                        >
+                                    </p>
+                                    <p>
+                                        <span
+                                            class="text-slate-400 w-20 inline-block"
+                                            >Pelatihan</span
+                                        >
+                                        <span class="font-bold"
+                                            >: {{ course.title }}</span
+                                        >
+                                    </p>
+                                </div>
+
+                                <p class="pt-1">
+                                    Dengan ini menyatakan dengan sesungguhnya
+                                    bahwa saya
+                                    <strong
+                                        >bersedia dan berkomitmen penuh</strong
+                                    >
+                                    untuk bekerja atau berkontribusi secara
+                                    aktif di bidang yang sesuai dengan pelatihan
+                                    yang telah saya ikuti dan selesaikan.
+                                </p>
+                                <p>
+                                    Pernyataan ini saya buat dengan penuh
+                                    kesadaran dan tanpa paksaan dari pihak
+                                    manapun.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Verification Input -->
+                        <div class="space-y-2">
+                            <label
+                                class="block text-xs font-bold text-slate-700 dark:text-slate-300"
+                            >
+                                Untuk mengkonfirmasi, ketik
+                                <span
+                                    class="text-sky-600 dark:text-sky-400 font-black"
+                                    >"saya siap bekerja"</span
+                                >
+                                di bawah ini:
+                            </label>
+
+                            <div
+                                v-if="declarationError"
+                                class="p-2.5 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-lg text-rose-700 dark:text-rose-300 text-[11px] flex items-center gap-2"
+                            >
+                                <AlertCircle class="w-3.5 h-3.5 shrink-0" />
+                                <span>{{ declarationError }}</span>
+                            </div>
+
+                            <input
+                                v-model="declarationInput"
+                                type="text"
+                                placeholder="Ketik: saya siap bekerja"
+                                autocomplete="off"
+                                class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border-2 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-0 transition-colors"
+                                :class="
+                                    declarationInput.trim().toLowerCase() ===
+                                    'saya siap bekerja'
+                                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30'
+                                        : 'border-slate-200 dark:border-slate-700'
+                                "
+                                @keyup.enter="submitDeclaration"
+                            />
+
+                            <p
+                                v-if="
+                                    declarationInput.trim().toLowerCase() ===
+                                    'saya siap bekerja'
+                                "
+                                class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1"
+                            >
+                                <CheckCircle2 class="w-3.5 h-3.5" />
+                                Verifikasi berhasil — siap untuk dikirim
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div
+                        class="sticky bottom-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 px-6 py-4 rounded-b-2xl flex items-center gap-3"
+                    >
+                        <button
+                            type="button"
+                            @click="closeDeclarationModal"
+                            class="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-600 transition-colors cursor-pointer"
+                        >
+                            Batal
+                        </button>
+                        <button
+                            type="button"
+                            @click="submitDeclaration"
+                            :disabled="
+                                isSubmittingDeclaration ||
+                                declarationInput.trim().toLowerCase() !==
+                                    'saya siap bekerja'
+                            "
+                            class="flex-[2] py-2.5 px-4 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed"
+                            :class="
+                                declarationInput.trim().toLowerCase() ===
+                                'saya siap bekerja'
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-600/25'
+                                    : 'bg-slate-300 dark:bg-slate-600'
+                            "
+                        >
+                            <Loader2
+                                v-if="isSubmittingDeclaration"
+                                class="w-4 h-4 animate-spin"
+                            />
+                            <Award v-else class="w-4 h-4" />
+                            <span>{{
+                                isSubmittingDeclaration
+                                    ? "Memproses Surat..."
+                                    : "Tandatangani & Selesaikan"
+                            }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>

@@ -26,6 +26,8 @@ class Enrollment extends Model
         'certificate_number',
         'certificate_hash',
         'certificate_issued_at',
+        'declaration_letter_path',
+        'declaration_signed_at',
     ];
 
     protected $casts = [
@@ -33,6 +35,7 @@ class Enrollment extends Model
         'completed_at' => 'datetime',
         'certificate_issued_at' => 'datetime',
         'progress_percentage' => 'float',
+        'declaration_signed_at' => 'datetime',
     ];
 
     public function course(): BelongsTo

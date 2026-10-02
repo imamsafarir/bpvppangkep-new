@@ -17,6 +17,9 @@ use Modules\Lms\Models\LessonProgress;
 use Modules\Lms\Models\Participant;
 use Modules\Lms\Models\Quiz;
 use Modules\Lms\Models\QuizAttempt;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ClassroomController extends Controller
 {
@@ -574,5 +577,118 @@ class ClassroomController extends Controller
             'progress_percentage' => $newPercentage,
             'attempt' => $attempt,
         ]);
+    }
+
+    /**
+     * Submit declaration letter.
+     */
+    public function submitDeclarationLetter(Request $request, Course $course): JsonResponse
+    {
+        $participantId = session('lms_participant_id');
+        if (!$participantId) {
+            return response()->json(['error' => 'Unauthenticated'], 401);
+        }
+
+        $enrollment = Enrollment::where('course_id', $course->id)
+            ->where('participant_id', $participantId)
+            ->first();
+
+        if (!$enrollment) {
+            return response()->json(['error' => 'Pendaftaran kelas tidak ditemukan.'], 404);
+        }
+
+        if (strtolower(trim($request->input('confirmation_text'))) !== 'saya siap bekerja') {
+            return response()->json(['error' => 'Teks konfirmasi tidak sesuai.'], 422);
+        }
+
+        if ($enrollment->status === 'completed') {
+            return response()->json(['error' => 'Pembelajaran sudah diselesaikan.'], 400);
+        }
+
+        $progressPercentage = $enrollment->recalculateProgress();
+        if ($progressPercentage < 100.0) {
+            return response()->json(['error' => 'Progress belum 100%.'], 400);
+        }
+
+        $participant = $enrollment->participant;
+
+        $pdf = Pdf::loadView('lms::pdf.declaration-letter', [
+            'participant' => $participant,
+            'course' => $course,
+            'enrollment' => $enrollment,
+            'date' => now('Asia/Makassar')->translatedFormat('d F Y'),
+        ]);
+
+        $fileName = "{$enrollment->id}_" . time() . ".pdf";
+        $path = "lms/declarations/{$fileName}";
+
+        Storage::disk('public')->put($path, $pdf->output());
+
+        $enrollment->declaration_letter_path = $path;
+        $enrollment->declaration_signed_at = now();
+        $enrollment->save();
+
+        // Use the proper attendance path from the enrollment
+        $attendancePath = $enrollment->attendance_path === 'live_zoom' || $enrollment->moduleAttendances()->where('attendance_path', 'live_zoom')->exists() ? 'live_zoom' : 'self_study';
+
+        $enrollment->completeAndIssueCertificate($attendancePath);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Surat pernyataan komitmen bekerja berhasil disubmit dan kelas selesai.',
+            'declaration_letter_path' => $path,
+            'certificate_number' => $enrollment->certificate_number,
+        ]);
+    }
+
+    /**
+     * Download or view declaration letter (Surat Pernyataan Komitmen Bekerja).
+     */
+    public function downloadDeclaration(Request $request, Enrollment $enrollment)
+    {
+        $participantId = session('lms_participant_id');
+        $user = $request->user();
+
+        $enrollment->loadMissing(['participant', 'course']);
+
+        $isAuthorized = ($participantId && $enrollment->participant_id === $participantId)
+            || ($user && ($user->hasRole(['admin_lms', 'admin', 'super_admin', 'admin_lms_instructor', 'instructor']) || $enrollment->course?->canManage($user)));
+
+        if (! $isAuthorized) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melihat surat pernyataan ini.');
+        }
+
+        // Regenerate PDF if file missing on disk
+        if (! $enrollment->declaration_letter_path || ! Storage::disk('public')->exists($enrollment->declaration_letter_path)) {
+            $pdf = Pdf::loadView('lms::pdf.declaration-letter', [
+                'participant' => $enrollment->participant,
+                'course' => $enrollment->course,
+                'enrollment' => $enrollment,
+                'date' => ($enrollment->declaration_signed_at ?? $enrollment->completed_at ?? now('Asia/Makassar'))->translatedFormat('d F Y'),
+            ]);
+
+            $fileName = "{$enrollment->id}_" . time() . '.pdf';
+            $path = "lms/declarations/{$fileName}";
+
+            Storage::disk('public')->makeDirectory('lms/declarations');
+            Storage::disk('public')->put($path, $pdf->output());
+
+            $enrollment->update([
+                'declaration_letter_path' => $path,
+                'declaration_signed_at' => $enrollment->declaration_signed_at ?? now(),
+            ]);
+        }
+
+        $safeName = Str::slug($enrollment->participant?->name ?? 'peserta');
+        $filename = "Surat_Pernyataan_{$safeName}.pdf";
+
+        if ($request->boolean('view') || $request->has('preview') || $request->route('view')) {
+            return response()->file(Storage::disk('public')->path($enrollment->declaration_letter_path), [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => "inline; filename=\"{$filename}\"",
+            ]);
+        }
+
+        return Storage::disk('public')->download($enrollment->declaration_letter_path, $filename);
     }
 }

@@ -241,6 +241,7 @@ const initDocument = async () => {
         loadingMessage.value = "Menghubungkan ke berkas PDF...";
 
         let loadingTask;
+        let doc = null;
         try {
             // First attempt: stream / chunked range loading via URL (avoids downloading entire file at once for 600+ users!)
             loadingTask = pdfjs.getDocument({
@@ -250,7 +251,7 @@ const initDocument = async () => {
                 disableStream: false,
                 rangeChunkSize: 65536, // 64KB chunks
             });
-            const doc = await loadingTask.promise;
+            doc = await loadingTask.promise;
             pdfDocInstance = markRaw(doc);
             totalPages.value = doc.numPages;
         } catch (streamErr) {
@@ -268,21 +269,16 @@ const initDocument = async () => {
             loadingTask = pdfjs.getDocument({
                 data: new Uint8Array(arrayBuffer),
             });
-            const doc = await loadingTask.promise;
+            doc = await loadingTask.promise;
             pdfDocInstance = markRaw(doc);
             totalPages.value = doc.numPages;
         }
 
-        if (pdfDocInstance) {
-            try {
-                // Ensure properly assigned
-            } catch (_) {}
-        }
         currentPage.value = 1;
-        highestPageVisited.value = props.alreadyCompleted ? doc.numPages : 1;
+        highestPageVisited.value = props.alreadyCompleted ? totalPages.value : 1;
         hasCompleted.value = props.alreadyCompleted;
 
-        if (doc.numPages === 1 && !hasCompleted.value) {
+        if (totalPages.value === 1 && !hasCompleted.value) {
             hasCompleted.value = true;
             emit("completed");
         }

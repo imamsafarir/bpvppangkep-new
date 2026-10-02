@@ -21,6 +21,8 @@ use Modules\Lms\Http\Controllers\Student\DashboardController;
 
 Route::get('/lms/verify/{hash}', [CertificateController::class, 'verify'])->name('lms.verify');
 Route::get('/lms/certificates/{enrollment}/download', [CertificateController::class, 'download'])->name('lms.certificate.download');
+Route::get('/lms/declarations/{enrollment}/view', [ClassroomController::class, 'downloadDeclaration'])->name('lms.declaration.view')->defaults('view', 1);
+Route::get('/lms/declarations/{enrollment}/download', [ClassroomController::class, 'downloadDeclaration'])->name('lms.declaration.download');
 
 /*
 |--------------------------------------------------------------------------
@@ -43,6 +45,8 @@ Route::prefix('lms')->name('lms.student.')->group(function () {
     Route::get('/learn/{course:slug}', [ClassroomController::class, 'show'])->name('classroom');
     Route::post('/lessons/{lesson}/complete', [ClassroomController::class, 'markLessonComplete'])->name('lesson.complete');
     Route::post('/courses/{course}/attend', [ClassroomController::class, 'submitAttendance'])->name('attend');
+    Route::post('/courses/{course}/declaration', [ClassroomController::class, 'submitDeclarationLetter'])->name('declaration.submit');
+    Route::get('/enrollments/{enrollment}/declaration/download', [ClassroomController::class, 'downloadDeclaration'])->name('declaration.download');
     Route::post('/quizzes/{quiz}/submit', [ClassroomController::class, 'submitQuiz'])->name('quiz.submit');
 });
 
