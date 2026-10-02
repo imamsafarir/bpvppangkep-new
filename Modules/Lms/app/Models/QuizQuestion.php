@@ -10,22 +10,7 @@ class QuizQuestion extends Model
 {
     use HasFactory;
 
-    protected static function booted(): void
-    {
-        static::saved(function (QuizQuestion $question) {
-            $courseId = $question->quiz?->course_id;
-            if (! empty($courseId)) {
-                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$courseId}");
-            }
-        });
 
-        static::deleted(function (QuizQuestion $question) {
-            $courseId = $question->quiz?->course_id;
-            if (! empty($courseId)) {
-                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$courseId}");
-            }
-        });
-    }
 
     protected $table = 'lms_quiz_questions';
 

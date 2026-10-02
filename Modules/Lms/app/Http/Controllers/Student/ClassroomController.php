@@ -52,37 +52,29 @@ class ClassroomController extends Controller
                 ->with('warning', 'Kelas pelatihan ini masih dalam status draft dan belum dibuka oleh admin.');
         }
 
-        // Load modules, lessons, and active quizzes with questions (cached for extreme scalability with 600+ concurrent students)
-        $cachedModules = Cache::remember(
-            "lms_course_curriculum_{$course->id}",
-            now()->addHours(6),
-            function () use ($course) {
-                return $course->modules()
-                    ->with([
-                        'lessons' => function ($l) {
-                            $l->orderBy('order_index');
-                        },
-                        'quiz' => function ($qz) {
-                            $qz->where('is_active', true)
-                                ->with(['questions' => function ($qu) {
-                                    $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
-                                        ->orderBy('order_index');
-                                }]);
-                        },
-                        'quizzes' => function ($qz) {
-                            $qz->where('is_active', true)
-                                ->with(['questions' => function ($qu) {
-                                    $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
-                                        ->orderBy('order_index');
-                                }]);
-                        },
-                    ])
-                    ->orderBy('day_number')
-                    ->orderBy('order_index')
-                    ->get();
-            }
-        );
-        $course->setRelation('modules', $cachedModules);
+        // Load modules, lessons, and active quizzes with questions using optimized eager-loading
+        $course->load([
+            'modules' => function ($m) {
+                $m->orderBy('day_number')->orderBy('order_index');
+            },
+            'modules.lessons' => function ($l) {
+                $l->orderBy('order_index');
+            },
+            'modules.quiz' => function ($qz) {
+                $qz->where('is_active', true)
+                    ->with(['questions' => function ($qu) {
+                        $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
+                            ->orderBy('order_index');
+                    }]);
+            },
+            'modules.quizzes' => function ($qz) {
+                $qz->where('is_active', true)
+                    ->with(['questions' => function ($qu) {
+                        $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
+                            ->orderBy('order_index');
+                    }]);
+            },
+        ]);
 
         // Get list of completed lesson IDs for this enrollment
         $completedLessonIds = LessonProgress::where('enrollment_id', $enrollment->id)

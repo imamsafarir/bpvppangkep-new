@@ -14,21 +14,7 @@ class Course extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected static function booted(): void
-    {
-        static::saved(function (Course $course) {
-            \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$course->id}");
-        });
 
-        static::deleted(function (Course $course) {
-            \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$course->id}");
-        });
-    }
-
-    public function clearCurriculumCache(): void
-    {
-        \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$this->id}");
-    }
 
     protected $table = 'lms_courses';
 
