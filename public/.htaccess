@@ -52,9 +52,19 @@
     ExpiresByType font/woff2 "access plus 1 year"
     ExpiresByType application/font-woff "access plus 1 year"
 
+    # Documents & PDFs
+    ExpiresByType application/pdf "access plus 1 month"
+
     # HTML and data
     ExpiresByType text/html "access plus 0 seconds"
     ExpiresByType application/json "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+    # Cache static assets to minimize requests to server for 600+ users
+    <FilesMatch "\.(pdf|jpg|jpeg|png|gif|webp|svg|css|js|woff|woff2|ttf|otf)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
 </IfModule>
 
 <IfModule mod_rewrite.c>

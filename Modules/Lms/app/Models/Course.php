@@ -14,6 +14,22 @@ class Course extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected static function booted(): void
+    {
+        static::saved(function (Course $course) {
+            \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$course->id}");
+        });
+
+        static::deleted(function (Course $course) {
+            \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$course->id}");
+        });
+    }
+
+    public function clearCurriculumCache(): void
+    {
+        \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$this->id}");
+    }
+
     protected $table = 'lms_courses';
 
     protected $fillable = [
@@ -84,12 +100,9 @@ class Course extends Model
 
         // 1. Check if any module's attendance is currently open
         if ($this->relationLoaded('modules') && $this->modules->isNotEmpty()) {
-            $hasOpenMod = $this->modules->contains(function ($m) {
+            return $this->modules->contains(function ($m) {
                 return $m->is_attendance_open_now;
             });
-            if ($hasOpenMod) {
-                return true;
-            }
         }
 
         // 2. Scheduled attendance window at course level
@@ -211,13 +224,14 @@ class Course extends Model
         $now = Carbon::now('Asia/Makassar');
 
         // Check active module first
-        if ($this->relationLoaded('modules')) {
+        if ($this->relationLoaded('modules') && $this->modules->isNotEmpty()) {
             $openMod = $this->modules->first(function ($m) {
                 return $m->is_attendance_open_now;
             });
             if ($openMod) {
                 return $openMod->attendance_remaining_seconds;
             }
+            return 0;
         }
 
         // Check scheduled attendance at course level

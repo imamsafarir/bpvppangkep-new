@@ -11,6 +11,21 @@ class Lesson extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::saved(function (Lesson $lesson) {
+            if (! empty($lesson->course_id)) {
+                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$lesson->course_id}");
+            }
+        });
+
+        static::deleted(function (Lesson $lesson) {
+            if (! empty($lesson->course_id)) {
+                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$lesson->course_id}");
+            }
+        });
+    }
+
     protected $table = 'lms_lessons';
 
     protected $fillable = [

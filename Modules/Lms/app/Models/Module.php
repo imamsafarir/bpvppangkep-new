@@ -13,6 +13,21 @@ class Module extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::saved(function (Module $module) {
+            if (! empty($module->course_id)) {
+                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$module->course_id}");
+            }
+        });
+
+        static::deleted(function (Module $module) {
+            if (! empty($module->course_id)) {
+                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$module->course_id}");
+            }
+        });
+    }
+
     protected $table = 'lms_modules';
 
     protected $fillable = [

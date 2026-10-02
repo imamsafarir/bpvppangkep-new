@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 use Modules\Lms\Models\Course;
@@ -51,30 +52,37 @@ class ClassroomController extends Controller
                 ->with('warning', 'Kelas pelatihan ini masih dalam status draft dan belum dibuka oleh admin.');
         }
 
-        // Load modules, lessons, and active quizzes with questions
-        $course->load([
-            'modules' => function ($q) {
-                $q->with([
-                    'lessons' => function ($l) {
-                        $l->orderBy('order_index');
-                    },
-                    'quiz' => function ($qz) {
-                        $qz->where('is_active', true)
-                            ->with(['questions' => function ($qu) {
-                                $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
-                                    ->orderBy('order_index');
-                            }]);
-                    },
-                    'quizzes' => function ($qz) {
-                        $qz->where('is_active', true)
-                            ->with(['questions' => function ($qu) {
-                                $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
-                                    ->orderBy('order_index');
-                            }]);
-                    },
-                ])->orderBy('day_number')->orderBy('order_index');
-            },
-        ]);
+        // Load modules, lessons, and active quizzes with questions (cached for extreme scalability with 600+ concurrent students)
+        $cachedModules = Cache::remember(
+            "lms_course_curriculum_{$course->id}",
+            now()->addHours(6),
+            function () use ($course) {
+                return $course->modules()
+                    ->with([
+                        'lessons' => function ($l) {
+                            $l->orderBy('order_index');
+                        },
+                        'quiz' => function ($qz) {
+                            $qz->where('is_active', true)
+                                ->with(['questions' => function ($qu) {
+                                    $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
+                                        ->orderBy('order_index');
+                                }]);
+                        },
+                        'quizzes' => function ($qz) {
+                            $qz->where('is_active', true)
+                                ->with(['questions' => function ($qu) {
+                                    $qu->select('id', 'quiz_id', 'question_text', 'question_type', 'options', 'points', 'order_index')
+                                        ->orderBy('order_index');
+                                }]);
+                        },
+                    ])
+                    ->orderBy('day_number')
+                    ->orderBy('order_index')
+                    ->get();
+            }
+        );
+        $course->setRelation('modules', $cachedModules);
 
         // Get list of completed lesson IDs for this enrollment
         $completedLessonIds = LessonProgress::where('enrollment_id', $enrollment->id)
@@ -82,13 +90,17 @@ class ClassroomController extends Controller
             ->pluck('lesson_id')
             ->toArray();
 
-        // Get student's quiz attempts for this enrollment
+        // Get student's quiz attempts for this enrollment (lean columns, excluding heavy answers text)
         $quizAttempts = QuizAttempt::where('enrollment_id', $enrollment->id)
+            ->select('id', 'quiz_id', 'enrollment_id', 'score', 'is_passed', 'completed_at')
             ->get()
             ->keyBy('quiz_id');
 
-        // Recalculate progress to ensure precision
-        $progressPercentage = $enrollment->recalculateProgress();
+        // Fast progress percentage (avoid write/UPDATE lock on every GET page load for 600 concurrent users)
+        $progressPercentage = (float) ($enrollment->progress_percentage ?? 0.0);
+        if ($enrollment->progress_percentage === null) {
+            $progressPercentage = $enrollment->recalculateProgress();
+        }
 
         // 1-day vs Multi-day and daily schedule info (Asia/Makassar)
         $durationDays = $course->duration_in_days;

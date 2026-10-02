@@ -932,6 +932,9 @@ const closeUnitAttendanceNow = (mod) => {
                         }
                     });
                 }
+                props.course.is_zoom_attendance_open = false;
+                props.course.is_attendance_open_now = false;
+                remainingAttendanceSeconds.value = 0;
             },
             onFinish: () => {
                 isOpeningUnitAttendance.value[mod.id] = false;
@@ -1824,36 +1827,42 @@ watch(
 
 const isUnitAttendanceActive = (mod) => {
     if (!mod) return false;
+
+    // 1. If real-time countdown timer is ticking > 0, it is definitely active
+    if ((unitAttendanceTimers.value[mod.id] || 0) > 0) return true;
+
+    // 2. If closed_at timestamp has passed and timer is 0 or less, attendance is closed
     if (mod.zoom_attendance_closed_at) {
         const closedTime = new Date(mod.zoom_attendance_closed_at).getTime();
-        if (mod.zoom_attendance_scheduled_at) {
-            const schedTime = new Date(
-                mod.zoom_attendance_scheduled_at,
-            ).getTime();
-            if (
-                closedTime >= schedTime &&
-                !isOpeningAttendanceSusulan.value[mod.id]
-            ) {
-                if ((unitAttendanceTimers.value[mod.id] || 0) <= 0) {
-                    return false;
-                }
-            }
-        } else if (
-            (unitAttendanceTimers.value[mod.id] || 0) <= 0 &&
-            !mod.is_attendance_open_now
-        ) {
+        if (Date.now() >= closedTime && (unitAttendanceTimers.value[mod.id] || 0) <= 0) {
             return false;
         }
     }
 
-    if ((unitAttendanceTimers.value[mod.id] || 0) > 0) return true;
+    // 3. Check scheduled window
     if (mod.zoom_attendance_scheduled_at) {
         const schedTime = new Date(mod.zoom_attendance_scheduled_at).getTime();
         const durationMs =
             (mod.zoom_attendance_duration_minutes || 30) * 60 * 1000;
         const now = Date.now();
-        if (now >= schedTime && now <= schedTime + durationMs) return true;
+        if (now >= schedTime && now <= schedTime + durationMs) {
+            // If explicitly closed after or at scheduled time
+            if (mod.zoom_attendance_closed_at) {
+                const closedTime = new Date(mod.zoom_attendance_closed_at).getTime();
+                if (closedTime >= schedTime && (unitAttendanceTimers.value[mod.id] || 0) <= 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
     }
+
+    // 4. If timer has reached 0 or less, not active
+    if ((unitAttendanceTimers.value[mod.id] || 0) <= 0) {
+        return false;
+    }
+
     return !!mod.is_attendance_open_now;
 };
 
@@ -1864,20 +1873,63 @@ const isUnitAttendanceEnded = (mod) => {
         const schedTime = new Date(mod.zoom_attendance_scheduled_at).getTime();
         const durationMs =
             (mod.zoom_attendance_duration_minutes || 30) * 60 * 1000;
-        if (Date.now() < schedTime + durationMs) return false;
-    }
-    if (mod.zoom_attendance_closed_at) return true;
-    if (mod.zoom_status === "ended") return true;
-    if (mod.zoom_attendance_opened_at && !mod.is_attendance_open_now)
-        return true;
-    if (mod.zoom_attendance_scheduled_at) {
-        const schedTime = new Date(mod.zoom_attendance_scheduled_at).getTime();
-        const durationMs =
-            (mod.zoom_attendance_duration_minutes || 30) * 60 * 1000;
         if (Date.now() >= schedTime + durationMs) return true;
+        if (mod.zoom_attendance_closed_at) {
+            const closedTime = new Date(mod.zoom_attendance_closed_at).getTime();
+            if (closedTime >= schedTime) return true;
+        }
     }
+    if (mod.zoom_attendance_closed_at) {
+        const closedTime = new Date(mod.zoom_attendance_closed_at).getTime();
+        if (Date.now() >= closedTime) return true;
+    }
+    if (mod.zoom_status === "ended") return true;
+    if (mod.zoom_attendance_opened_at && !mod.is_attendance_open_now && (unitAttendanceTimers.value[mod.id] || 0) <= 0)
+        return true;
     return false;
 };
+
+const isAnyAttendanceActive = computed(() => {
+    // 1. Check if any module currently has active attendance
+    if (props.course?.modules && props.course.modules.length > 0) {
+        return props.course.modules.some((mod) => isUnitAttendanceActive(mod));
+    }
+
+    // 2. Fallback for single course level (no modules)
+    if ((remainingAttendanceSeconds.value || 0) > 0) return true;
+
+    if (props.course?.zoom_attendance_scheduled_at) {
+        const schedTime = new Date(
+            props.course.zoom_attendance_scheduled_at,
+        ).getTime();
+        const durationMs =
+            (props.course.zoom_attendance_duration_minutes || 30) * 60 * 1000;
+        const now = Date.now();
+        if (now >= schedTime && now <= schedTime + durationMs) {
+            if (props.course.zoom_attendance_closed_at) {
+                const closed = new Date(
+                    props.course.zoom_attendance_closed_at,
+                ).getTime();
+                if (closed >= schedTime && (remainingAttendanceSeconds.value || 0) <= 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    if (props.course?.zoom_attendance_closed_at) {
+        const closedTime = new Date(
+            props.course.zoom_attendance_closed_at,
+        ).getTime();
+        if (Date.now() >= closedTime && (remainingAttendanceSeconds.value || 0) <= 0) {
+            return false;
+        }
+    }
+
+    return false;
+});
 
 let attendanceTimer = null;
 onMounted(() => {
@@ -1963,6 +2015,13 @@ onMounted(() => {
             Object.keys(unitAttendanceTimers.value).forEach((id) => {
                 if (unitAttendanceTimers.value[id] > 0) {
                     unitAttendanceTimers.value[id]--;
+                    if (unitAttendanceTimers.value[id] <= 0) {
+                        unitAttendanceTimers.value[id] = 0;
+                        const mod = props.course?.modules?.find((m) => m.id == id);
+                        if (mod) {
+                            mod.is_attendance_open_now = false;
+                        }
+                    }
                 }
             });
         }
@@ -2870,7 +2929,7 @@ const uploadTemplateImage = (e) => {
                             {{ metrics.total_lessons }} Elemen
                         </span>
                         <span
-                            v-if="course.is_zoom_attendance_open"
+                            v-if="isAnyAttendanceActive"
                             class="ml-1 text-xs px-2 py-0.5 rounded-full bg-rose-500 text-white font-bold animate-pulse"
                         >
                             ABSEN ONLINE MEETING ON

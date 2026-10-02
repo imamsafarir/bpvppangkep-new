@@ -11,6 +11,21 @@ class Quiz extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::saved(function (Quiz $quiz) {
+            if (! empty($quiz->course_id)) {
+                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$quiz->course_id}");
+            }
+        });
+
+        static::deleted(function (Quiz $quiz) {
+            if (! empty($quiz->course_id)) {
+                \Illuminate\Support\Facades\Cache::forget("lms_course_curriculum_{$quiz->course_id}");
+            }
+        });
+    }
+
     protected $table = 'lms_quizzes';
 
     protected $fillable = [

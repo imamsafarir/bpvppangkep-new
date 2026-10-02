@@ -383,11 +383,17 @@ onMounted(() => {
             props.course.is_attendance_open_now = true;
         } else if (remainingAttendanceSeconds.value > 0) {
             remainingAttendanceSeconds.value--;
-        } else if (
-            props.course.is_attendance_open_now &&
-            !props.course.is_zoom_attendance_open
-        ) {
-            props.course.is_attendance_open_now = false;
+            if (remainingAttendanceSeconds.value <= 0) {
+                props.course.is_attendance_open_now = false;
+            }
+        } else if (props.course.is_attendance_open_now) {
+            let isStillOpen = false;
+            if (props.course.zoom_attendance_closed_at) {
+                isStillOpen = now <= new Date(props.course.zoom_attendance_closed_at).getTime();
+            }
+            if (!isStillOpen) {
+                props.course.is_attendance_open_now = false;
+            }
         }
     }, 1000);
 });

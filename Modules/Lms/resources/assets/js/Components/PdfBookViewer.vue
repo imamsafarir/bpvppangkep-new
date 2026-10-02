@@ -238,11 +238,27 @@ const initDocument = async () => {
 
     try {
         const pdfjs = await loadPdfJs();
-        loadingMessage.value = "Mengunduh berkas presentasi PDF...";
+        loadingMessage.value = "Menghubungkan ke berkas PDF...";
 
         let loadingTask;
         try {
-            // First attempt: fetch file bytes directly (fast, resilient, avoids worker stream bugs)
+            // First attempt: stream / chunked range loading via URL (avoids downloading entire file at once for 600+ users!)
+            loadingTask = pdfjs.getDocument({
+                url: props.pdfUrl,
+                withCredentials: false,
+                disableAutoFetch: true, // Only fetch chunks needed for current active page
+                disableStream: false,
+                rangeChunkSize: 65536, // 64KB chunks
+            });
+            const doc = await loadingTask.promise;
+            pdfDocInstance = markRaw(doc);
+            totalPages.value = doc.numPages;
+        } catch (streamErr) {
+            console.warn(
+                "Streaming PDF range request gagal, mencoba direct fetch fallback...",
+                streamErr,
+            );
+            loadingMessage.value = "Mengunduh berkas presentasi PDF...";
             const response = await fetch(props.pdfUrl);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status} ${response.statusText}`);
@@ -252,27 +268,16 @@ const initDocument = async () => {
             loadingTask = pdfjs.getDocument({
                 data: new Uint8Array(arrayBuffer),
             });
-        } catch (fetchErr) {
-            console.warn(
-                "Direct fetch PDF gagal, mencoba via URL streaming...",
-                fetchErr,
-            );
-            loadingTask = pdfjs.getDocument({
-                url: props.pdfUrl,
-                withCredentials: false,
-            });
+            const doc = await loadingTask.promise;
+            pdfDocInstance = markRaw(doc);
+            totalPages.value = doc.numPages;
         }
 
         if (pdfDocInstance) {
             try {
-                pdfDocInstance.destroy();
+                // Ensure properly assigned
             } catch (_) {}
-            pdfDocInstance = null;
         }
-
-        const doc = await loadingTask.promise;
-        pdfDocInstance = markRaw(doc);
-        totalPages.value = doc.numPages;
         currentPage.value = 1;
         highestPageVisited.value = props.alreadyCompleted ? doc.numPages : 1;
         hasCompleted.value = props.alreadyCompleted;
