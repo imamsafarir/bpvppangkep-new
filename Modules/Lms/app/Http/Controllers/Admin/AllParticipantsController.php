@@ -164,6 +164,13 @@ class AllParticipantsController extends Controller
                 'certificate_download_url' => $enrollment->certificate_number
                     ? route('lms.certificate.download', $enrollment->id)
                     : null,
+                'declaration_letter_path' => $enrollment->declaration_letter_path,
+                'declaration_signed_at' => $enrollment->declaration_signed_at?->format('d M Y H:i'),
+                'declaration_view_url' => $enrollment->declaration_letter_path
+                    ? route('lms.declaration.view', $enrollment->id)
+                    : ($enrollment->status === 'completed'
+                        ? route('lms.declaration.view', $enrollment->id)
+                        : null),
                 'module_attendances_count' => $enrollment->moduleAttendances->count(),
                 'quiz_attempts_count' => $quizAttempts->count(),
                 'highest_quiz_score' => $highestScore,

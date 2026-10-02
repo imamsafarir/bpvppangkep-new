@@ -35,6 +35,7 @@ import {
     UserCheck,
     Layers,
     FileSpreadsheet,
+    FileText,
     Loader2,
 } from "lucide-vue-next";
 
@@ -562,7 +563,10 @@ const getInitial = (name) => {
                                     Keikutsertaan Kelas
                                 </th>
                                 <th class="py-3.5 px-4 text-center">
-                                    Kelulusan & Sertifikat
+                                    Kelulusan &amp; Sertifikat
+                                </th>
+                                <th class="py-3.5 px-4 text-center">
+                                    Surat Pernyataan
                                 </th>
                                 <th class="py-3.5 px-4">Kode Transaksi</th>
                                 <th class="py-3.5 px-4 text-center w-36">
@@ -579,7 +583,7 @@ const getInitial = (name) => {
                                     participants.data.length === 0
                                 "
                             >
-                                <td colspan="7" class="py-16 text-center">
+                                <td colspan="8" class="py-16 text-center">
                                     <div
                                         class="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto"
                                     >
@@ -807,6 +811,20 @@ const getInitial = (name) => {
                                             }}
                                         </span>
                                     </div>
+                                </td>
+
+                                <!-- Surat Pernyataan -->
+                                <td class="py-3.5 px-4 text-center">
+                                    <span
+                                        v-if="p.completed_enrollments_count > 0"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 cursor-pointer hover:bg-teal-100 transition-colors"
+                                        @click="openDetailModal(p)"
+                                        title="Lihat detail surat pernyataan di riwayat pelatihan"
+                                    >
+                                        <FileText class="w-3 h-3" />
+                                        <span>Lihat Detail</span>
+                                    </span>
+                                    <span v-else class="text-slate-400 text-[11px]">-</span>
                                 </td>
 
                                 <!-- Transaction Code -->
@@ -1441,6 +1459,36 @@ const getInitial = (name) => {
                                                 >Belum diterbitkan</span
                                             >
                                         </div>
+                                    </div>
+
+                                    <!-- Surat Pernyataan -->
+                                    <div
+                                        v-if="en.status === 'completed'"
+                                        class="flex items-center justify-between gap-3 bg-teal-50/60 dark:bg-teal-950/30 border border-teal-200/80 dark:border-teal-800/50 rounded-lg px-3 py-2.5"
+                                    >
+                                        <div class="flex items-center gap-2">
+                                            <FileText class="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                                            <div>
+                                                <p class="text-[11px] font-bold text-teal-800 dark:text-teal-300">
+                                                    Surat Pernyataan Komitmen Kerja
+                                                </p>
+                                                <p v-if="en.declaration_signed_at" class="text-[10px] text-teal-600 dark:text-teal-400">
+                                                    Ditandatangani: {{ en.declaration_signed_at }}
+                                                </p>
+                                                <p v-else class="text-[10px] text-slate-400">
+                                                    Belum ditandatangani
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            v-if="en.declaration_view_url"
+                                            :href="en.declaration_view_url"
+                                            target="_blank"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700 transition-colors shrink-0"
+                                        >
+                                            <ExternalLink class="w-3 h-3" />
+                                            <span>Lihat Surat</span>
+                                        </a>
                                     </div>
                                 </div>
                             </div>

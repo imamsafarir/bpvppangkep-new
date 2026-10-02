@@ -288,6 +288,7 @@ const formatDateRange = (start, end) => {
                                     </span>
                                     <span
                                         v-else-if="
+                                            e.status !== 'completed' &&
                                             e.course?.is_zoom_attendance_open
                                         "
                                         class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-600 text-white shadow-md animate-pulse"
@@ -297,6 +298,7 @@ const formatDateRange = (start, end) => {
                                     </span>
                                     <span
                                         v-else-if="
+                                            e.status !== 'completed' &&
                                             e.course?.zoom_status === 'live'
                                         "
                                         class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black bg-rose-600 text-white shadow-md animate-pulse"

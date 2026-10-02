@@ -3048,12 +3048,9 @@ const uploadTemplateImage = (e) => {
                                     <span
                                         class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold"
                                     >
-                                        WITA Hari Ini:
-                                        {{ formatDateIndo(todayWita) }}
+                                        📅 {{ formatDateIndo(todayWita) }}
                                         <template v-if="todayDayNumber">
-                                            (Hari ke-{{
-                                                todayDayNumber
-                                            }})</template
+                                            &bull; Hari ke-{{ todayDayNumber }}</template
                                         >
                                         <template
                                             v-else-if="courseStatusRelative"
