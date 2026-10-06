@@ -393,32 +393,21 @@ const submit = () => {
     form.clearErrors();
 
     if (editItem.value) {
-        // Send as POST with _method spoofing for PHP multipart/form-data update support
-        router.post(
-            `/admin/berita/${editItem.value.id}`,
-            {
-                _method: "PUT",
-                jenis: form.jenis,
-                judul_berita: form.judul_berita,
-                tags: form.tags,
-                konten_berita: form.konten_berita,
-                keterangan_galeri: form.keterangan_galeri,
-                file_foto: form.file_foto,
+        form.transform((data) => ({
+            ...data,
+            _method: "PUT",
+        })).post(`/admin/berita/${editItem.value.id}`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => closeDialog(),
+            onFinish: () => {
+                isSubmitting.value = false;
             },
-            {
-                forceFormData: true,
-                onSuccess: () => closeDialog(),
-                onError: (errors) => {
-                    form.errors = errors;
-                },
-                onFinish: () => {
-                    isSubmitting.value = false;
-                },
-            },
-        );
+        });
     } else {
         form.post("/admin/berita", {
             forceFormData: true,
+            preserveScroll: true,
             onSuccess: () => closeDialog(),
             onFinish: () => {
                 isSubmitting.value = false;
