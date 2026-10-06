@@ -360,11 +360,17 @@ const openEdit = (item) => {
     isDialogOpen.value = true;
 };
 
+const fileInputRef = ref(null);
+const fileInputDropzoneRef = ref(null);
+
 const closeDialog = () => {
     isDialogOpen.value = false;
     editItem.value = null;
     previewImage.value = null;
     form.reset();
+    form.clearErrors();
+    if (fileInputRef.value) fileInputRef.value.value = "";
+    if (fileInputDropzoneRef.value) fileInputDropzoneRef.value.value = "";
 };
 
 const onFileSelected = (e) => {
@@ -378,12 +384,16 @@ const onFileSelected = (e) => {
 const removeSelectedFile = () => {
     form.file_foto = null;
     previewImage.value = null;
+    if (fileInputRef.value) fileInputRef.value.value = "";
+    if (fileInputDropzoneRef.value) fileInputDropzoneRef.value.value = "";
 };
 
 const submit = () => {
     isSubmitting.value = true;
+    form.clearErrors();
+
     if (editItem.value) {
-        // Send as POST with _method spoofing for PHP file upload support
+        // Send as POST with _method spoofing for PHP multipart/form-data update support
         router.post(
             `/admin/berita/${editItem.value.id}`,
             {
@@ -398,6 +408,9 @@ const submit = () => {
             {
                 forceFormData: true,
                 onSuccess: () => closeDialog(),
+                onError: (errors) => {
+                    form.errors = errors;
+                },
                 onFinish: () => {
                     isSubmitting.value = false;
                 },
@@ -1259,6 +1272,9 @@ const getImageUrl = (val) => {
                             v-model="form.judul_berita"
                             placeholder="Masukkan judul artikel..."
                         />
+                        <p v-if="form.errors.judul_berita" class="text-[11px] text-rose-500 font-medium">
+                            {{ form.errors.judul_berita }}
+                        </p>
                     </div>
 
                     <div v-if="form.jenis === 'berita'" class="space-y-1.5">
@@ -1269,6 +1285,9 @@ const getImageUrl = (val) => {
                             v-model="form.tags"
                             placeholder="pelatihan, kejuruan, balai"
                         />
+                        <p v-if="form.errors.tags" class="text-[11px] text-rose-500 font-medium">
+                            {{ form.errors.tags }}
+                        </p>
                     </div>
 
                     <div v-if="form.jenis === 'berita'" class="space-y-1.5">
@@ -1280,6 +1299,9 @@ const getImageUrl = (val) => {
                             placeholder="Tuliskan isi artikel lengkap di sini seperti di Microsoft Word..."
                             upload-folder="website/berita/konten"
                         />
+                        <p v-if="form.errors.konten_berita" class="text-[11px] text-rose-500 font-medium">
+                            {{ form.errors.konten_berita }}
+                        </p>
                     </div>
 
                     <div v-if="form.jenis === 'galeri'" class="space-y-1.5">
@@ -1290,6 +1312,9 @@ const getImageUrl = (val) => {
                             v-model="form.keterangan_galeri"
                             placeholder="Keterangan dokumentasi kegiatan..."
                         />
+                        <p v-if="form.errors.keterangan_galeri" class="text-[11px] text-rose-500 font-medium">
+                            {{ form.errors.keterangan_galeri }}
+                        </p>
                     </div>
 
                     <!-- FOTO UPLOAD ZONE -->
@@ -1321,6 +1346,7 @@ const getImageUrl = (val) => {
                                 >
                                     Ganti Foto
                                     <input
+                                        ref="fileInputRef"
                                         type="file"
                                         accept="image/*"
                                         class="hidden"
@@ -1343,6 +1369,7 @@ const getImageUrl = (val) => {
                             class="rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-500 bg-slate-50/50 hover:bg-blue-50/30 p-6 text-center transition-colors cursor-pointer relative"
                         >
                             <input
+                                ref="fileInputDropzoneRef"
                                 type="file"
                                 accept="image/*"
                                 class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
@@ -1364,6 +1391,9 @@ const getImageUrl = (val) => {
                                 </div>
                             </div>
                         </div>
+                        <p v-if="form.errors.file_foto" class="text-[11px] text-rose-500 font-medium">
+                            {{ form.errors.file_foto }}
+                        </p>
                     </div>
 
                     <DialogFooter>

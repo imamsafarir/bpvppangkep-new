@@ -86,6 +86,27 @@ const cleanDescription = computed(() => {
         .trim()
         .slice(0, 160);
 });
+
+const stringKeywords = computed(() => {
+    const raw = props.berita?.tags;
+    if (Array.isArray(raw)) {
+        return raw.filter(Boolean).join(", ");
+    }
+    if (typeof raw === "string") {
+        if (raw.startsWith("[") && raw.endsWith("]")) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) {
+                    return parsed.filter(Boolean).join(", ");
+                }
+            } catch {
+                /* ignore */
+            }
+        }
+        return raw;
+    }
+    return "";
+});
 </script>
 
 <template>
@@ -94,7 +115,7 @@ const cleanDescription = computed(() => {
         :description="cleanDescription"
         :image="gambarUtama"
         type="article"
-        :keywords="berita.tags"
+        :keywords="stringKeywords"
         :settings="settings"
     >
         <main class="py-12 min-h-screen bg-slate-50/50">

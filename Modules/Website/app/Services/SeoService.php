@@ -52,7 +52,10 @@ class SeoService
             }
 
             if (!empty($berita['tags'])) {
-                $keywords = $berita['tags'] . ', ' . $defaultKeywords;
+                $tagsFormatted = is_array($berita['tags']) 
+                    ? implode(', ', array_filter($berita['tags'])) 
+                    : (string) $berita['tags'];
+                $keywords = $tagsFormatted . ', ' . $defaultKeywords;
             }
 
             $foto = $berita['file_foto'] ?? null;
