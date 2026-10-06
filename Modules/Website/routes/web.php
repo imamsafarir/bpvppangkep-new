@@ -90,7 +90,7 @@ Route::middleware(['auth', 'role:admin_website'])->prefix('admin')->name('admin.
     Route::get('/berita', [BeritaController::class, 'index'])->name('berita.index');
     Route::post('/berita', [BeritaController::class, 'store'])->name('berita.store');
     Route::post('/berita/bulk-delete', [BeritaController::class, 'bulkDestroy'])->name('berita.bulk-destroy');
-    Route::put('/berita/{beritaDanGaleri}', [BeritaController::class, 'update'])->name('berita.update');
+    Route::match(['put', 'post'], '/berita/{beritaDanGaleri}', [BeritaController::class, 'update'])->name('berita.update');
     Route::delete('/berita/{beritaDanGaleri}', [BeritaController::class, 'destroy'])->name('berita.destroy');
 
     // Profil Balai
