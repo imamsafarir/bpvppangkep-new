@@ -1,6 +1,6 @@
 import "./bootstrap";
 import { createApp, h } from "vue";
-import { createInertiaApp } from "@inertiajs/vue3";
+import { createInertiaApp, router } from "@inertiajs/vue3";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { initPwa } from "./pwa";
 
@@ -31,9 +31,25 @@ createInertiaApp({
         );
     },
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .mount(el);
+
+        // Keep CSRF token in sync on every Inertia navigation
+        router.on("navigate", (event) => {
+            const token = event.detail.page.props?.csrf_token;
+            if (token) {
+                const meta = document.head.querySelector('meta[name="csrf-token"]');
+                if (meta) {
+                    meta.setAttribute("content", token);
+                }
+                if (window.axios) {
+                    window.axios.defaults.headers.common["X-CSRF-TOKEN"] = token;
+                }
+            }
+        });
+
+        return app;
     },
     progress: {
         color: "#2563EB",

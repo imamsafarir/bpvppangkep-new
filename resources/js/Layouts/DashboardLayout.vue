@@ -149,6 +149,19 @@ const openPasswordDialog = () => {
     isPasswordDialogOpen.value = true;
 };
 
+const handleLogout = () => {
+    router.post(
+        "/logout",
+        {},
+        {
+            onFinish: () => {
+                // Hard reload to completely reset all SPA memory, CSRF tokens, and cookies
+                window.location.href = "/login";
+            },
+        },
+    );
+};
+
 const closePasswordDialog = () => {
     isPasswordDialogOpen.value = false;
     passwordForm.reset();
@@ -1048,15 +1061,14 @@ const navigation = [
                     </button>
 
                     <!-- Integrated Logout Button -->
-                    <Link
-                        href="/logout"
-                        method="post"
-                        as="button"
+                    <button
+                        type="button"
+                        @click="handleLogout"
                         class="p-2 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
                         title="Keluar / Logout"
                     >
                         <LogOut class="w-4 h-4" />
-                    </Link>
+                    </button>
                 </div>
 
                 <!-- Collapsed view -->
@@ -1082,15 +1094,14 @@ const navigation = [
                             </AvatarFallback>
                         </Avatar>
                     </button>
-                    <Link
-                        href="/logout"
-                        method="post"
-                        as="button"
+                    <button
+                        type="button"
+                        @click="handleLogout"
                         class="p-2 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Keluar / Logout"
                     >
                         <LogOut class="w-4 h-4" />
-                    </Link>
+                    </button>
                 </div>
             </div>
         </aside>
