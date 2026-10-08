@@ -56,7 +56,7 @@ Route::prefix('lms')->name('lms.student.')->group(function () {
 | Protected by Auth & LMS Admin Roles
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:admin_lms,admin,super_admin,admin_lms_instructor,instructor'])
+Route::middleware(['auth', 'role:admin_lms,super_admin'])
     ->prefix('admin/lms')
     ->name('admin.lms.')
     ->group(function () {

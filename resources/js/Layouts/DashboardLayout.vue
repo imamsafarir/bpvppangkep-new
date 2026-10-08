@@ -541,12 +541,12 @@ const navigation = [
             {
                 name: "Modul LMS",
                 icon: GraduationCap,
-                roles: ["super_admin", "admin", "admin_lms"],
+                roles: ["super_admin", "admin_lms"],
                 children: [
                     {
                         name: "Daftar Pelatihan",
                         href: "/admin/lms",
-                        roles: ["super_admin", "admin", "admin_lms"],
+                        roles: ["super_admin", "admin_lms"],
                     },
                     {
                         name: "Data Seluruh Peserta",
