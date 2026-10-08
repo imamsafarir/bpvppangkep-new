@@ -110,6 +110,7 @@ Route::middleware(['auth', 'role:admin_lms,super_admin'])
         Route::post('/{course}/zoom/start', [OnlineMeetingController::class, 'startZoomNow'])->name('zoom.start');
         Route::post('/{course}/zoom/end', [OnlineMeetingController::class, 'endZoomNow'])->name('zoom.end');
         Route::post('/{course}/enrollments/{enrollment}/manual-attendance', [OnlineMeetingController::class, 'manualAttendance'])->name('attendance.manual');
+        Route::post('/{course}/enrollments/bulk-attendance', [OnlineMeetingController::class, 'bulkAttendance'])->name('attendance.bulk');
         Route::get('/{course}/monitoring', [OnlineMeetingController::class, 'monitoringData'])->name('monitoring.data');
 
         // Unit-level Online Meeting & Attendance Controls (Multi-Day / Per Unit)

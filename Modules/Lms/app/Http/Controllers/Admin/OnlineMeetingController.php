@@ -225,6 +225,37 @@ class OnlineMeetingController extends Controller
     }
 
     /**
+     * Admin bulk attendance override for multiple participants.
+     */
+    public function bulkAttendance(Request $request, Course $course): RedirectResponse
+    {
+        if (! $course->canManage($request->user())) {
+            abort(403, 'Anda tidak memiliki hak akses untuk mengelola kelas ini.');
+        }
+
+        $validated = $request->validate([
+            'enrollment_ids' => 'required|array|min:1',
+            'enrollment_ids.*' => 'integer',
+            'attendance_path' => 'required|in:live_zoom,self_study',
+        ]);
+
+        $enrollments = Enrollment::where('course_id', $course->id)
+            ->whereIn('id', $validated['enrollment_ids'])
+            ->get();
+
+        $path = $validated['attendance_path'];
+        $count = 0;
+
+        foreach ($enrollments as $enrollment) {
+            $enrollment->completeAndIssueCertificate($path);
+            $count++;
+        }
+
+        $label = $path === 'live_zoom' ? 'Hadir Online Meeting' : 'Hadir Belajar Mandiri';
+        return back()->with('success', "Berhasil menyelesaikan absensi ({$label}) dan menerbitkan sertifikat untuk {$count} peserta terpilih.");
+    }
+
+    /**
      * Get live monitoring data for the course.
      */
     public function monitoringData(Course $course): JsonResponse

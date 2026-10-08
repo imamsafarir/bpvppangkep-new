@@ -1595,6 +1595,35 @@ const deleteSelectedEnrollments = () => {
     }
 };
 
+const isBulkCompletingAttendance = ref(false);
+const completeSelectedAttendance = (path = "live_zoom") => {
+    if (selectedEnrollmentIds.value.length === 0) return;
+    const label = path === "live_zoom" ? "Online Meeting (Live)" : "Belajar Mandiri (100%)";
+    if (
+        confirm(
+            `Selesaikan absensi untuk ${selectedEnrollmentIds.value.length} peserta terpilih melalui jalur "${label}" dan terbitkan sertifikat mereka?`,
+        )
+    ) {
+        isBulkCompletingAttendance.value = true;
+        router.post(
+            `/admin/lms/${props.course.id}/enrollments/bulk-attendance`,
+            {
+                enrollment_ids: selectedEnrollmentIds.value,
+                attendance_path: path,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    selectedEnrollmentIds.value = [];
+                },
+                onFinish: () => {
+                    isBulkCompletingAttendance.value = false;
+                },
+            },
+        );
+    }
+};
+
 // Modal Preview Surat Pernyataan
 const showDeclarationModal = ref(false);
 const selectedDeclarationEnrollment = ref(null);
@@ -5153,33 +5182,68 @@ const uploadTemplateImage = (e) => {
                         <!-- Bulk Action Controls -->
                         <div
                             v-if="selectedEnrollmentIds.length > 0"
-                            class="flex items-center gap-2 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 px-3 py-1.5 rounded-lg text-xs"
+                            class="flex items-center gap-2 flex-wrap bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/60 p-2 rounded-xl text-xs"
                         >
                             <span
-                                class="font-bold text-rose-700 dark:text-rose-300"
+                                class="font-bold text-indigo-900 dark:text-indigo-200 px-1"
                             >
-                                {{ selectedEnrollmentIds.length }} peserta
-                                dipilih
+                                {{ selectedEnrollmentIds.length }} peserta dipilih:
                             </span>
+
+                            <!-- Tombol Selesaikan Absensi (Online Meeting) -->
                             <button
+                                type="button"
+                                @click="completeSelectedAttendance('live_zoom')"
+                                :disabled="isBulkCompletingAttendance || isBulkDeleting"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer"
+                                title="Selesaikan absensi sebagai Hadir Online Meeting dan terbitkan sertifikat"
+                            >
+                                <Loader2
+                                    v-if="isBulkCompletingAttendance"
+                                    class="w-3.5 h-3.5 animate-spin"
+                                />
+                                <Video v-else class="w-3.5 h-3.5" />
+                                <span>Selesaikan: Hadir Online</span>
+                            </button>
+
+                            <!-- Tombol Selesaikan Absensi (Mandiri) -->
+                            <button
+                                type="button"
+                                @click="completeSelectedAttendance('self_study')"
+                                :disabled="isBulkCompletingAttendance || isBulkDeleting"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition shadow-xs disabled:opacity-50 cursor-pointer"
+                                title="Selesaikan absensi sebagai Hadir Belajar Mandiri dan terbitkan sertifikat"
+                            >
+                                <Loader2
+                                    v-if="isBulkCompletingAttendance"
+                                    class="w-3.5 h-3.5 animate-spin"
+                                />
+                                <BookOpen v-else class="w-3.5 h-3.5" />
+                                <span>Selesaikan: Mandiri</span>
+                            </button>
+
+                            <div class="h-4 w-px bg-slate-300 dark:bg-slate-700 mx-1"></div>
+
+                            <!-- Tombol Hapus Terpilih -->
+                            <button
+                                type="button"
                                 @click="deleteSelectedEnrollments"
-                                :disabled="isBulkDeleting"
-                                class="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition disabled:opacity-50"
+                                :disabled="isBulkDeleting || isBulkCompletingAttendance"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-200 hover:bg-rose-600 hover:text-white text-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-rose-700 rounded-lg text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+                                title="Keluarkan peserta terpilih dari kelas"
                             >
                                 <Loader2
                                     v-if="isBulkDeleting"
                                     class="w-3.5 h-3.5 animate-spin"
                                 />
                                 <Trash2 v-else class="w-3.5 h-3.5" />
-                                {{
-                                    isBulkDeleting
-                                        ? "Menghapus..."
-                                        : "Hapus Terpilih"
-                                }}
+                                <span>Hapus</span>
                             </button>
+
                             <button
+                                type="button"
                                 @click="selectedEnrollmentIds = []"
-                                class="text-slate-500 hover:text-slate-700 dark:text-slate-400 text-xs underline ml-1"
+                                class="text-slate-500 hover:text-slate-700 dark:text-slate-400 text-xs underline ml-1 cursor-pointer"
                             >
                                 Batal
                             </button>
