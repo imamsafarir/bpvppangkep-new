@@ -69,8 +69,12 @@ class JdihController extends Controller
             'status_peraturan' => 'required|string|max:255',
             'judul_peraturan'  => 'required|string|max:255',
             'nomor_peraturan'  => 'required|string|max:255',
-            'file_path'        => 'nullable',
+            'file_path'        => $request->hasFile('file_path') ? 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar|max:51200' : 'nullable',
             'tentang'          => 'nullable|string',
+        ], [
+            'file_path.file'  => 'Berkas dokumen tidak valid.',
+            'file_path.mimes' => 'Format dokumen peraturan harus berupa file PDF atau dokumen terkait.',
+            'file_path.max'   => 'Ukuran dokumen maksimal adalah 50MB.',
         ]);
 
         if ($request->hasFile('file_path')) {
@@ -94,11 +98,21 @@ class JdihController extends Controller
             'status_peraturan' => 'required|string|max:255',
             'judul_peraturan'  => 'required|string|max:255',
             'nomor_peraturan'  => 'required|string|max:255',
-            'file_path'        => 'nullable',
+            'file_path'        => $request->hasFile('file_path') ? 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar|max:51200' : 'nullable',
+            'remove_file_path' => 'nullable|boolean',
             'tentang'          => 'nullable|string',
+        ], [
+            'file_path.file'  => 'Berkas dokumen tidak valid.',
+            'file_path.mimes' => 'Format dokumen peraturan harus berupa file PDF atau dokumen terkait.',
+            'file_path.max'   => 'Ukuran dokumen maksimal adalah 50MB.',
         ]);
 
-        if ($request->hasFile('file_path')) {
+        if ($request->boolean('remove_file_path') || $request->input('remove_file_path') === 'true' || $request->input('remove_file_path') === '1') {
+            if ($jdih->file_path) {
+                $this->mediaService->deleteMedia($jdih->file_path);
+            }
+            $validated['file_path'] = null;
+        } elseif ($request->hasFile('file_path')) {
             if ($jdih->file_path) {
                 $this->mediaService->deleteMedia($jdih->file_path);
             }
@@ -109,10 +123,11 @@ class JdihController extends Controller
             );
         } elseif ($request->filled('file_path') && is_string($request->input('file_path'))) {
             $validated['file_path'] = $this->mediaService->cleanPath($request->input('file_path'));
-        } elseif (!$request->filled('file_path') && !$request->hasFile('file_path')) {
+        } elseif (! $request->filled('file_path') && ! $request->hasFile('file_path')) {
             unset($validated['file_path']);
         }
 
+        unset($validated['remove_file_path']);
         $jdih->update($validated);
 
         return back()->with('success', 'Peraturan berhasil diperbarui.');

@@ -103,8 +103,12 @@ class BeritaController extends Controller
             'judul_berita'      => 'nullable|string|max:255',
             'tags'              => 'nullable',
             'konten_berita'     => 'nullable|string',
-            'file_foto'         => 'nullable',
+            'file_foto'         => $request->hasFile('file_foto') ? 'file|mimes:jpeg,png,jpg,webp,avif,gif|max:20480' : 'nullable',
             'keterangan_galeri' => 'nullable|string|max:255',
+        ], [
+            'file_foto.file'    => 'Berkas foto tidak valid.',
+            'file_foto.mimes'   => 'Format foto harus berupa JPG, PNG, WEBP, AVIF, atau GIF.',
+            'file_foto.max'     => 'Ukuran foto maksimal adalah 20MB.',
         ]);
 
         $folder = $validated['jenis'] === 'galeri' ? 'website/galeri/foto' : 'website/berita/sampul';
@@ -138,14 +142,22 @@ class BeritaController extends Controller
             'judul_berita'      => 'nullable|string|max:255',
             'tags'              => 'nullable',
             'konten_berita'     => 'nullable|string',
-            'file_foto'         => 'nullable',
+            'file_foto'         => $request->hasFile('file_foto') ? 'file|mimes:jpeg,png,jpg,webp,avif,gif|max:20480' : 'nullable',
+            'remove_file_foto'  => 'nullable|boolean',
             'keterangan_galeri' => 'nullable|string|max:255',
+        ], [
+            'file_foto.file'    => 'Berkas foto tidak valid.',
+            'file_foto.mimes'   => 'Format foto harus berupa JPG, PNG, WEBP, AVIF, atau GIF.',
+            'file_foto.max'     => 'Ukuran foto maksimal adalah 20MB.',
         ]);
 
         $folder = $validated['jenis'] === 'galeri' ? 'website/galeri/foto' : 'website/berita/sampul';
         $slug = $validated['judul_berita'] ?? $validated['keterangan_galeri'] ?? $validated['jenis'];
 
-        if ($request->hasFile('file_foto')) {
+        if ($request->boolean('remove_file_foto') || $request->input('remove_file_foto') === 'true' || $request->input('remove_file_foto') === '1') {
+            $this->deletePhotos($beritaDanGaleri->file_foto);
+            $validated['file_foto'] = null;
+        } elseif ($request->hasFile('file_foto')) {
             $this->deletePhotos($beritaDanGaleri->file_foto);
             $path = $this->mediaService->storeImage(
                 $request->file('file_foto'),
@@ -156,7 +168,7 @@ class BeritaController extends Controller
         } elseif ($request->filled('file_foto') && is_string($request->input('file_foto'))) {
             $cleaned = $this->mediaService->cleanPath($request->input('file_foto'));
             $validated['file_foto'] = json_encode([$cleaned]);
-        } elseif (!$request->filled('file_foto') && !$request->hasFile('file_foto')) {
+        } elseif (! $request->filled('file_foto') && ! $request->hasFile('file_foto')) {
             unset($validated['file_foto']);
         }
 
@@ -164,6 +176,7 @@ class BeritaController extends Controller
             $validated['tags'] = array_map('trim', explode(',', $validated['tags']));
         }
 
+        unset($validated['remove_file_foto']);
         $beritaDanGaleri->update($validated);
 
         return back()->with('success', 'Data berhasil diperbarui.');

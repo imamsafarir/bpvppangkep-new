@@ -85,20 +85,45 @@ const form = useForm({
     pejabat_struktural: parsePejabat(props.profil?.pejabat_struktural),
 });
 
+const removeChiefPhoto = ref(false);
+const removeStruktur = ref(false);
+
 const onChiefPhotoSelected = (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+            alert("Ukuran foto kepala balai tidak boleh melebihi 10MB.");
+            return;
+        }
         form.chief_photo_path = file;
+        removeChiefPhoto.value = false;
         chiefPhotoPreview.value = URL.createObjectURL(file);
     }
+};
+
+const clearChiefPhoto = () => {
+    form.chief_photo_path = null;
+    chiefPhotoPreview.value = null;
+    removeChiefPhoto.value = true;
 };
 
 const onStrukturSelected = (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (file.size > 20 * 1024 * 1024) {
+            alert("Ukuran bagan struktur organisasi tidak boleh melebihi 20MB.");
+            return;
+        }
         form.struktur_organisasi = file;
+        removeStruktur.value = false;
         strukturPreview.value = URL.createObjectURL(file);
     }
+};
+
+const clearStruktur = () => {
+    form.struktur_organisasi = null;
+    strukturPreview.value = null;
+    removeStruktur.value = true;
 };
 
 const addPejabat = () => {
@@ -170,9 +195,11 @@ const triggerPejabatUpload = (idx) => {
             }
         } catch (err) {
             console.error("Upload failed", err);
-            alert(
-                "Gagal mengunggah foto. Pastikan ukuran file tidak melebihi 10MB.",
-            );
+            const errMsg =
+                err.response?.data?.errors?.file?.[0] ||
+                err.response?.data?.message ||
+                "Gagal mengunggah foto. Pastikan ukuran file tidak melebihi 10MB dan format gambar valid.";
+            alert(errMsg);
         } finally {
             uploadingPejabatIdx.value = null;
         }
@@ -180,33 +207,20 @@ const triggerPejabatUpload = (idx) => {
     input.click();
 };
 
-const isSubmitting = ref(false);
-
 const submit = () => {
-    isSubmitting.value = true;
-    // Send as POST with method spoofing for file uploads
-    router.post(
-        "/admin/profil",
-        {
-            _method: "PUT",
-            chief_name: form.chief_name,
-            chief_nip: form.chief_nip,
-            chief_photo_path: form.chief_photo_path,
-            sambutan_kepala: form.sambutan_kepala,
-            tentang_kami: form.tentang_kami,
-            ppid: form.ppid,
-            tugas_fungsi: form.tugas_fungsi,
-            visi_misi: form.visi_misi,
-            struktur_organisasi: form.struktur_organisasi,
-            pejabat_struktural: form.pejabat_struktural,
+    form.transform((data) => ({
+        ...data,
+        _method: "PUT",
+        remove_chief_photo_path: removeChiefPhoto.value ? 1 : 0,
+        remove_struktur_organisasi: removeStruktur.value ? 1 : 0,
+    })).post("/admin/profil", {
+        forceFormData: true,
+        preserveScroll: true,
+        onSuccess: () => {
+            removeChiefPhoto.value = false;
+            removeStruktur.value = false;
         },
-        {
-            forceFormData: true,
-            onFinish: () => {
-                isSubmitting.value = false;
-            },
-        },
-    );
+    });
 };
 
 const activeSection = ref("kepala");
@@ -243,11 +257,11 @@ const sections = [
                 </div>
                 <Button
                     @click="submit"
-                    :loading="isSubmitting"
+                    :loading="form.processing"
                     class="w-fit bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20"
                 >
-                    <Save v-if="!isSubmitting" class="w-4 h-4 mr-1.5" />
-                    {{ isSubmitting ? "Menyimpan..." : "Simpan Perubahan" }}
+                    <Save v-if="!form.processing" class="w-4 h-4 mr-1.5" />
+                    {{ form.processing ? "Menyimpan..." : "Simpan Perubahan" }}
                 </Button>
             </div>
 
@@ -340,18 +354,30 @@ const sections = [
                                         >
                                             Foto Terpasang
                                         </div>
-                                        <label
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
-                                        >
-                                            <Upload class="w-3.5 h-3.5" />
-                                            <span>Unggah Foto Baru</span>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                class="hidden"
-                                                @change="onChiefPhotoSelected"
-                                            />
-                                        </label>
+                                        <div class="flex items-center gap-2">
+                                            <label
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                                            >
+                                                <Upload class="w-3.5 h-3.5 text-blue-600" />
+                                                <span>Ganti Foto</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    class="hidden"
+                                                    @change="onChiefPhotoSelected"
+                                                />
+                                            </label>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="clearChiefPhoto"
+                                                class="h-8 px-2.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+                                            >
+                                                <Trash2 class="w-3.5 h-3.5 mr-1" />
+                                                Hapus
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -379,10 +405,17 @@ const sections = [
                                             Klik untuk memilih foto kepala balai
                                         </div>
                                         <div class="text-[10px] text-slate-400">
-                                            Format PNG, JPG, JPEG (Maks. 5MB)
+                                            Format PNG, JPG, JPEG, WEBP (Maks. 10MB)
                                         </div>
                                     </div>
                                 </div>
+
+                                <p
+                                    v-if="form.errors.chief_photo_path"
+                                    class="text-xs text-rose-500 font-medium mt-1"
+                                >
+                                    {{ form.errors.chief_photo_path }}
+                                </p>
                             </div>
                         </template>
 
@@ -487,20 +520,32 @@ const sections = [
                                         class="max-h-72 w-full object-contain rounded-xl border border-slate-200 bg-white p-2"
                                         alt="Bagan Struktur"
                                     />
-                                    <label
-                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
-                                    >
-                                        <Upload
-                                            class="w-3.5 h-3.5 text-blue-600"
-                                        />
-                                        <span>Ganti Bagan (Gambar / PDF)</span>
-                                        <input
-                                            type="file"
-                                            accept="image/*,application/pdf"
-                                            class="hidden"
-                                            @change="onStrukturSelected"
-                                        />
-                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        <label
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                                        >
+                                            <Upload
+                                                class="w-3.5 h-3.5 text-blue-600"
+                                            />
+                                            <span>Ganti Bagan (Gambar / PDF)</span>
+                                            <input
+                                                type="file"
+                                                accept="image/*,application/pdf"
+                                                class="hidden"
+                                                @change="onStrukturSelected"
+                                            />
+                                        </label>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            @click="clearStruktur"
+                                            class="h-8 px-2.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+                                        >
+                                            <Trash2 class="w-3.5 h-3.5 mr-1" />
+                                            Hapus Bagan
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div
@@ -528,10 +573,17 @@ const sections = [
                                             organisasi (Gambar / PDF)
                                         </div>
                                         <div class="text-[10px] text-slate-400">
-                                            Format PNG, JPG, JPEG, WEBP, PDF
+                                            Format PNG, JPG, JPEG, WEBP, PDF (Maks. 20MB)
                                         </div>
                                     </div>
                                 </div>
+
+                                <p
+                                    v-if="form.errors.struktur_organisasi"
+                                    class="text-xs text-rose-500 font-medium mt-1"
+                                >
+                                    {{ form.errors.struktur_organisasi }}
+                                </p>
                             </div>
                         </template>
 

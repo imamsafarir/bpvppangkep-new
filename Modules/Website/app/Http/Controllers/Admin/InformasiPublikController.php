@@ -70,8 +70,12 @@ class InformasiPublikController extends Controller
         $validated = $request->validate([
             'kategori'     => 'required|string|max:255',
             'nama_dokumen' => 'required|string|max:255',
-            'file_path'    => 'nullable',
+            'file_path'    => $request->hasFile('file_path') ? 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,jpeg,png,jpg,webp|max:51200' : 'nullable',
             'deskripsi'    => 'nullable|string',
+        ], [
+            'file_path.file'  => 'Berkas dokumen tidak valid.',
+            'file_path.mimes' => 'Format berkas dokumen harus PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ZIP, atau RAR.',
+            'file_path.max'   => 'Ukuran dokumen maksimal adalah 50MB.',
         ]);
 
         $kategoriFolder = Str::slug($validated['kategori'], '_');
@@ -95,16 +99,26 @@ class InformasiPublikController extends Controller
     public function update(Request $request, InformasiPublik $informasiPublik): RedirectResponse
     {
         $validated = $request->validate([
-            'kategori'     => 'required|string|max:255',
-            'nama_dokumen' => 'required|string|max:255',
-            'file_path'    => 'nullable',
-            'deskripsi'    => 'nullable|string',
+            'kategori'         => 'required|string|max:255',
+            'nama_dokumen'     => 'required|string|max:255',
+            'file_path'        => $request->hasFile('file_path') ? 'file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,zip,rar,jpeg,png,jpg,webp|max:51200' : 'nullable',
+            'remove_file_path' => 'nullable|boolean',
+            'deskripsi'        => 'nullable|string',
+        ], [
+            'file_path.file'  => 'Berkas dokumen tidak valid.',
+            'file_path.mimes' => 'Format berkas dokumen harus PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, ZIP, atau RAR.',
+            'file_path.max'   => 'Ukuran dokumen maksimal adalah 50MB.',
         ]);
 
         $kategoriFolder = Str::slug($validated['kategori'], '_');
         $folder = "website/informasi-publik/{$kategoriFolder}";
 
-        if ($request->hasFile('file_path')) {
+        if ($request->boolean('remove_file_path') || $request->input('remove_file_path') === 'true' || $request->input('remove_file_path') === '1') {
+            if ($informasiPublik->file_path) {
+                $this->mediaService->deleteMedia($informasiPublik->file_path);
+            }
+            $validated['file_path'] = null;
+        } elseif ($request->hasFile('file_path')) {
             if ($informasiPublik->file_path) {
                 $this->mediaService->deleteMedia($informasiPublik->file_path);
             }
@@ -115,10 +129,11 @@ class InformasiPublikController extends Controller
             );
         } elseif ($request->filled('file_path') && is_string($request->input('file_path'))) {
             $validated['file_path'] = $this->mediaService->cleanPath($request->input('file_path'));
-        } elseif (!$request->filled('file_path') && !$request->hasFile('file_path')) {
+        } elseif (! $request->filled('file_path') && ! $request->hasFile('file_path')) {
             unset($validated['file_path']);
         }
 
+        unset($validated['remove_file_path']);
         $informasiPublik->update($validated);
 
         return back()->with('success', 'Dokumen berhasil diperbarui.');

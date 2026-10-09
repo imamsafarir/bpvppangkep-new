@@ -325,6 +325,7 @@ const form = useForm({
     tags: "",
     konten_berita: "",
     file_foto: null,
+    remove_file_foto: false,
     keterangan_galeri: "",
 });
 
@@ -335,6 +336,7 @@ const openCreate = (jenis) => {
     form._method = "POST";
     form.jenis = jenis;
     form.file_foto = null;
+    form.remove_file_foto = false;
     isDialogOpen.value = true;
 };
 
@@ -350,6 +352,7 @@ const openEdit = (item) => {
     form.konten_berita = item.konten_berita ?? "";
     form.keterangan_galeri = item.keterangan_galeri ?? "";
     form.file_foto = null;
+    form.remove_file_foto = false;
 
     if (item.file_foto) {
         previewImage.value = getImageUrl(item.file_foto);
@@ -376,7 +379,14 @@ const closeDialog = () => {
 const onFileSelected = (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (file.size > 20 * 1024 * 1024) {
+            form.errors.file_foto = "Ukuran file foto melebihi batas maksimal 20MB.";
+            if (e.target) e.target.value = "";
+            return;
+        }
+        delete form.errors.file_foto;
         form.file_foto = file;
+        form.remove_file_foto = false;
         previewImage.value = URL.createObjectURL(file);
     }
 };
@@ -384,6 +394,8 @@ const onFileSelected = (e) => {
 const removeSelectedFile = () => {
     form.file_foto = null;
     previewImage.value = null;
+    form.remove_file_foto = true;
+    delete form.errors.file_foto;
     if (fileInputRef.value) fileInputRef.value.value = "";
     if (fileInputDropzoneRef.value) fileInputDropzoneRef.value.value = "";
 };

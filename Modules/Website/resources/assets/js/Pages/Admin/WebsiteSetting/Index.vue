@@ -119,28 +119,65 @@ watch(
     { deep: true },
 );
 
+const removeLogo = ref(false);
+const removeFavicon = ref(false);
+const removePopup = ref(false);
+
 const onLogoSelected = (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+            alert("Ukuran file logo tidak boleh melebihi 10MB.");
+            return;
+        }
         form.logo_path = file;
+        removeLogo.value = false;
         logoPreview.value = URL.createObjectURL(file);
     }
+};
+
+const clearLogo = () => {
+    form.logo_path = null;
+    logoPreview.value = null;
+    removeLogo.value = true;
 };
 
 const onFaviconSelected = (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Ukuran file favicon tidak boleh melebihi 5MB.");
+            return;
+        }
         form.favicon_path = file;
+        removeFavicon.value = false;
         faviconPreview.value = URL.createObjectURL(file);
     }
+};
+
+const clearFavicon = () => {
+    form.favicon_path = null;
+    faviconPreview.value = null;
+    removeFavicon.value = true;
 };
 
 const onPopupSelected = (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (file.size > 10 * 1024 * 1024) {
+            alert("Ukuran file pop-up tidak boleh melebihi 10MB.");
+            return;
+        }
         form.popup_image_path = file;
+        removePopup.value = false;
         popupPreview.value = URL.createObjectURL(file);
     }
+};
+
+const clearPopup = () => {
+    form.popup_image_path = null;
+    popupPreview.value = null;
+    removePopup.value = true;
 };
 
 const addSlider = () => {
@@ -184,9 +221,11 @@ const triggerSliderUpload = (sIdx) => {
             }
         } catch (err) {
             console.error("Upload failed", err);
-            alert(
-                "Gagal mengunggah banner. Pastikan ukuran file tidak melebihi 10MB.",
-            );
+            const errMsg =
+                err.response?.data?.errors?.file?.[0] ||
+                err.response?.data?.message ||
+                "Gagal mengunggah banner. Pastikan ukuran file tidak melebihi 20MB dan format gambar valid.";
+            alert(errMsg);
         } finally {
             uploadingSliderIdx.value = null;
         }
@@ -207,19 +246,31 @@ const submit = () => {
     form.transform((data) => ({
         ...data,
         _method: "PUT",
+        remove_logo_path: removeLogo.value ? 1 : 0,
+        remove_favicon_path: removeFavicon.value ? 1 : 0,
+        remove_popup_image_path: removePopup.value ? 1 : 0,
     })).post("/admin/settings", {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: (page) => {
+            removeLogo.value = false;
+            removeFavicon.value = false;
+            removePopup.value = false;
             const updated = page.props?.settings || props.settings;
             if (updated?.logo_path) {
                 logoPreview.value = getStorageUrl(updated.logo_path);
+            } else {
+                logoPreview.value = null;
             }
             if (updated?.favicon_path) {
                 faviconPreview.value = `${getStorageUrl(updated.favicon_path)}?v=${Date.now()}`;
+            } else {
+                faviconPreview.value = null;
             }
             if (updated?.popup_image_path) {
                 popupPreview.value = getStorageUrl(updated.popup_image_path);
+            } else {
+                popupPreview.value = null;
             }
             if (updated?.sliders) {
                 form.sliders = parseSliders(updated.sliders);
@@ -329,25 +380,40 @@ const submit = () => {
                                     >
                                     <div
                                         v-if="logoPreview"
-                                        class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center gap-4"
+                                        class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-4"
                                     >
-                                        <img
-                                            :src="logoPreview"
-                                            class="h-12 w-auto object-contain bg-white p-2 rounded-xl border border-slate-200"
-                                            alt="Logo"
-                                        />
-                                        <label
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
-                                        >
-                                            <Upload class="w-3.5 h-3.5" />
-                                            <span>Ganti Logo</span>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                class="hidden"
-                                                @change="onLogoSelected"
+                                        <div class="flex items-center gap-3">
+                                            <img
+                                                :src="logoPreview"
+                                                class="h-12 w-auto object-contain bg-white p-2 rounded-xl border border-slate-200"
+                                                alt="Logo"
                                             />
-                                        </label>
+                                            <span class="text-xs font-semibold text-slate-700">Logo Aktif</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <label
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                                            >
+                                                <Upload class="w-3.5 h-3.5 text-blue-600" />
+                                                <span>Ganti</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    class="hidden"
+                                                    @change="onLogoSelected"
+                                                />
+                                            </label>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="clearLogo"
+                                                class="h-8 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+                                            >
+                                                <Trash2 class="w-3.5 h-3.5 mr-1" />
+                                                Hapus
+                                            </Button>
+                                        </div>
                                     </div>
                                     <label
                                         v-else
@@ -361,7 +427,7 @@ const submit = () => {
                                             >Unggah Logo</span
                                         >
                                         <span class="text-[10px] text-slate-400"
-                                            >PNG transparan disarankan</span
+                                            >PNG transparan disarankan (Maks. 10MB)</span
                                         >
                                         <input
                                             type="file"
@@ -370,6 +436,12 @@ const submit = () => {
                                             @change="onLogoSelected"
                                         />
                                     </label>
+                                    <p
+                                        v-if="form.errors.logo_path"
+                                        class="text-xs text-rose-500 font-medium mt-1"
+                                    >
+                                        {{ form.errors.logo_path }}
+                                    </p>
                                 </div>
 
                                 <!-- Upload Favicon -->
@@ -380,25 +452,40 @@ const submit = () => {
                                     >
                                     <div
                                         v-if="faviconPreview"
-                                        class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center gap-4"
+                                        class="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between gap-4"
                                     >
-                                        <img
-                                            :src="faviconPreview"
-                                            class="h-10 w-10 object-contain bg-white p-1 rounded-xl border border-slate-200"
-                                            alt="Favicon"
-                                        />
-                                        <label
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
-                                        >
-                                            <Upload class="w-3.5 h-3.5" />
-                                            <span>Ganti Favicon</span>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                class="hidden"
-                                                @change="onFaviconSelected"
+                                        <div class="flex items-center gap-3">
+                                            <img
+                                                :src="faviconPreview"
+                                                class="h-10 w-10 object-contain bg-white p-1 rounded-xl border border-slate-200"
+                                                alt="Favicon"
                                             />
-                                        </label>
+                                            <span class="text-xs font-semibold text-slate-700">Favicon Aktif</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <label
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shadow-2xs"
+                                            >
+                                                <Upload class="w-3.5 h-3.5 text-blue-600" />
+                                                <span>Ganti</span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    class="hidden"
+                                                    @change="onFaviconSelected"
+                                                />
+                                            </label>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                @click="clearFavicon"
+                                                class="h-8 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+                                            >
+                                                <Trash2 class="w-3.5 h-3.5 mr-1" />
+                                                Hapus
+                                            </Button>
+                                        </div>
                                     </div>
                                     <label
                                         v-else
@@ -412,7 +499,7 @@ const submit = () => {
                                             >Unggah Favicon</span
                                         >
                                         <span class="text-[10px] text-slate-400"
-                                            >PNG atau ICO ukuran 32x32</span
+                                            >PNG atau ICO ukuran 32x32 (Maks. 5MB)</span
                                         >
                                         <input
                                             type="file"
@@ -421,6 +508,12 @@ const submit = () => {
                                             @change="onFaviconSelected"
                                         />
                                     </label>
+                                    <p
+                                        v-if="form.errors.favicon_path"
+                                        class="text-xs text-rose-500 font-medium mt-1"
+                                    >
+                                        {{ form.errors.favicon_path }}
+                                    </p>
                                 </div>
                             </div>
                         </template>
@@ -731,25 +824,40 @@ const submit = () => {
                                         >
                                         <div
                                             v-if="popupPreview"
-                                            class="p-4 rounded-xl border border-slate-200 bg-white flex items-center gap-4"
+                                            class="p-4 rounded-xl border border-slate-200 bg-white flex items-center justify-between gap-4"
                                         >
-                                            <img
-                                                :src="popupPreview"
-                                                class="h-20 w-auto object-cover rounded-lg border border-slate-200"
-                                                alt="Popup"
-                                            />
-                                            <label
-                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs"
-                                            >
-                                                <Upload class="w-3.5 h-3.5" />
-                                                <span>Ganti Gambar</span>
-                                                <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    class="hidden"
-                                                    @change="onPopupSelected"
+                                            <div class="flex items-center gap-3">
+                                                <img
+                                                    :src="popupPreview"
+                                                    class="h-20 w-auto object-cover rounded-lg border border-slate-200"
+                                                    alt="Popup"
                                                 />
-                                            </label>
+                                                <span class="text-xs font-semibold text-slate-700">Banner Pop-up Aktif</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <label
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer shadow-2xs"
+                                                >
+                                                    <Upload class="w-3.5 h-3.5 text-blue-600" />
+                                                    <span>Ganti</span>
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        class="hidden"
+                                                        @change="onPopupSelected"
+                                                    />
+                                                </label>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    @click="clearPopup"
+                                                    class="h-8 px-2.5 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl"
+                                                >
+                                                    <Trash2 class="w-3.5 h-3.5 mr-1" />
+                                                    Hapus
+                                                </Button>
+                                            </div>
                                         </div>
                                         <label
                                             v-else
@@ -762,6 +870,9 @@ const submit = () => {
                                                 class="text-xs font-bold text-slate-700"
                                                 >Unggah Banner Pop-up</span
                                             >
+                                            <span class="text-[10px] text-slate-400 mt-0.5"
+                                                >Format PNG, JPG, JPEG, WEBP (Maks. 10MB)</span
+                                            >
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -769,6 +880,12 @@ const submit = () => {
                                                 @change="onPopupSelected"
                                             />
                                         </label>
+                                        <p
+                                            v-if="form.errors.popup_image_path"
+                                            class="text-xs text-rose-500 font-medium mt-1"
+                                        >
+                                            {{ form.errors.popup_image_path }}
+                                        </p>
                                     </div>
 
                                     <div class="space-y-1.5">

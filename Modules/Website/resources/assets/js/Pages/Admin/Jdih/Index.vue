@@ -104,6 +104,7 @@ const form = useForm({
     judul_peraturan: "",
     nomor_peraturan: "",
     file_path: null,
+    remove_file_path: false,
     tentang: "",
 });
 
@@ -115,15 +116,34 @@ const getDocUrl = (path) => {
 const onFileSelected = (e) => {
     const file = e.target.files[0];
     if (file) {
+        if (file.size > 50 * 1024 * 1024) {
+            form.errors.file_path = "Ukuran dokumen melebihi batas maksimal 50MB.";
+            if (e.target) e.target.value = "";
+            return;
+        }
+        delete form.errors.file_path;
         selectedFile.value = file;
         form.file_path = file;
+        form.remove_file_path = false;
     }
 };
 
 const removeSelectedFile = () => {
     selectedFile.value = null;
     form.file_path = editItem.value?.file_path ?? "";
+    delete form.errors.file_path;
     if (fileInputRef.value) fileInputRef.value.value = "";
+};
+
+const removeExistingFile = () => {
+    selectedFile.value = null;
+    form.file_path = null;
+    form.remove_file_path = true;
+    delete form.errors.file_path;
+    if (fileInputRef.value) fileInputRef.value.value = "";
+    if (editItem.value) {
+        editItem.value.file_path = null;
+    }
 };
 
 const openCreate = () => {
@@ -131,6 +151,8 @@ const openCreate = () => {
     selectedFile.value = null;
     uploadMode.value = "file";
     form.reset();
+    form.clearErrors();
+    form.remove_file_path = false;
     isDialogOpen.value = true;
 };
 
@@ -138,10 +160,12 @@ const openEdit = (item) => {
     editItem.value = item;
     selectedFile.value = null;
     uploadMode.value = item.file_path?.startsWith("http") ? "url" : "file";
+    form.clearErrors();
     form.status_peraturan = item.status_peraturan;
     form.judul_peraturan = item.judul_peraturan;
     form.nomor_peraturan = item.nomor_peraturan;
     form.file_path = item.file_path ?? "";
+    form.remove_file_path = false;
     form.tentang = item.tentang ?? "";
     isDialogOpen.value = true;
 };
@@ -151,47 +175,33 @@ const closeDialog = () => {
     editItem.value = null;
     selectedFile.value = null;
     form.reset();
+    form.clearErrors();
 };
 
 const submit = () => {
     isSubmitting.value = true;
+    form.clearErrors();
     if (editItem.value) {
-        router.post(
-            `/admin/jdih/${editItem.value.id}`,
-            {
-                _method: "PUT",
-                status_peraturan: form.status_peraturan,
-                judul_peraturan: form.judul_peraturan,
-                nomor_peraturan: form.nomor_peraturan,
-                file_path: form.file_path,
-                tentang: form.tentang,
+        form.transform((data) => ({
+            ...data,
+            _method: "PUT",
+        })).post(`/admin/jdih/${editItem.value.id}`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => closeDialog(),
+            onFinish: () => {
+                isSubmitting.value = false;
             },
-            {
-                forceFormData: true,
-                onSuccess: () => closeDialog(),
-                onFinish: () => {
-                    isSubmitting.value = false;
-                },
-            },
-        );
+        });
     } else {
-        router.post(
-            "/admin/jdih",
-            {
-                status_peraturan: form.status_peraturan,
-                judul_peraturan: form.judul_peraturan,
-                nomor_peraturan: form.nomor_peraturan,
-                file_path: form.file_path,
-                tentang: form.tentang,
+        form.post("/admin/jdih", {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => closeDialog(),
+            onFinish: () => {
+                isSubmitting.value = false;
             },
-            {
-                forceFormData: true,
-                onSuccess: () => closeDialog(),
-                onFinish: () => {
-                    isSubmitting.value = false;
-                },
-            },
-        );
+        });
     }
 };
 
@@ -650,12 +660,23 @@ const deleteItem = (item) => {
                                         </p>
                                     </div>
                                 </div>
-                                <label
-                                    for="jdih_file_input"
-                                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer shadow-2xs"
-                                >
-                                    <Upload class="w-3 h-3" /> Ganti
-                                </label>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <label
+                                        for="jdih_file_input"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 cursor-pointer shadow-2xs"
+                                    >
+                                        <Upload class="w-3 h-3" /> Ganti
+                                    </label>
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        @click="removeExistingFile"
+                                        class="h-7 px-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                    >
+                                        <Trash2 class="w-3.5 h-3.5 mr-1" /> Hapus
+                                    </Button>
+                                </div>
                             </div>
 
                             <label
@@ -672,9 +693,16 @@ const deleteItem = (item) => {
                                     Pilih berkas PDF dari komputer
                                 </p>
                                 <p class="text-[10px] text-slate-400 mt-0.5">
-                                    Format dokumen: PDF (Maks. 20MB disarankan)
+                                    Format dokumen: PDF (Maks. 50MB)
                                 </p>
                             </label>
+
+                            <p
+                                v-if="form.errors.file_path"
+                                class="text-[11px] text-rose-500 font-medium"
+                            >
+                                {{ form.errors.file_path }}
+                            </p>
                         </div>
 
                         <!-- Mode URL Eksternal -->

@@ -49,19 +49,32 @@ const parsedItems = computed(() => {
                   year: "numeric",
               })
             : "Baru saja";
-        const cleanContent = (item.konten_berita || "").replace(
-            /<[^>]*>?/gm,
-            "",
-        );
+        const stripHtml = (html) => {
+            if (!html) return "";
+            let text = html.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, "");
+            text = text.replace(/<style[^>]*>([\S\s]*?)<\/style>/gmi, "");
+            text = text.replace(/<[^>]+>/gm, " ");
+            text = text
+                .replace(/&nbsp;/g, " ")
+                .replace(/&amp;/g, "&")
+                .replace(/&quot;/g, '"')
+                .replace(/&#39;/g, "'")
+                .replace(/&lt;/g, "<")
+                .replace(/&gt;/g, ">");
+            return text.replace(/\s+/g, " ").trim();
+        };
+
+        const cleanContent = stripHtml(item.konten_berita);
 
         return {
             id: item.id,
             judul: item.judul_berita,
             tag: String(tagFinal).trim().toLowerCase(),
             tag_label: String(tagFinal).trim(),
+            konten_bersih: cleanContent,
             ringkasan:
-                cleanContent.length > 120
-                    ? cleanContent.substring(0, 120) + "..."
+                cleanContent.length > 140
+                    ? cleanContent.substring(0, 140) + "..."
                     : cleanContent,
             gambar_url: gambar ? `/storage/${gambar}` : null,
             tanggal: tanggal,
@@ -79,17 +92,15 @@ const availableTags = computed(() => {
 });
 
 const filteredItems = computed(() => {
+    const q = searchQuery.value.toLowerCase().trim();
     return parsedItems.value.filter((item) => {
         const matchesTag =
             currentTag.value === "all" ||
             item.tag_label.toLowerCase() === currentTag.value.toLowerCase();
         const matchesSearch =
-            item.judul
-                .toLowerCase()
-                .includes(searchQuery.value.toLowerCase()) ||
-            item.ringkasan
-                .toLowerCase()
-                .includes(searchQuery.value.toLowerCase());
+            !q ||
+            item.judul.toLowerCase().includes(q) ||
+            item.konten_bersih.toLowerCase().includes(q);
         return matchesTag && matchesSearch;
     });
 });

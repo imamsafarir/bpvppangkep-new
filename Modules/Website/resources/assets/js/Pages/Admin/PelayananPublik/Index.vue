@@ -437,9 +437,11 @@ const triggerFileUpload = (type, index) => {
             }
         } catch (err) {
             console.error("Upload failed", err);
-            alert(
-                "Gagal mengunggah file lampiran. Pastikan ukuran file tidak melebihi 20MB.",
-            );
+            const errMsg =
+                err.response?.data?.errors?.file?.[0] ||
+                err.response?.data?.message ||
+                "Gagal mengunggah file lampiran. Pastikan ukuran file tidak melebihi 20MB dan format didukung.";
+            alert(errMsg);
         } finally {
             uploadingFiles.value[uploadKey] = false;
         }
@@ -2197,6 +2199,13 @@ const submit = () => {
                                         @change="onAlurSelected"
                                     />
                                 </label>
+
+                                <p
+                                    v-if="form.errors.foto_alur_pelayanan"
+                                    class="text-xs text-rose-500 font-medium mt-1"
+                                >
+                                    {{ form.errors.foto_alur_pelayanan }}
+                                </p>
                             </div>
 
                             <!-- Teks Deskripsi Alur Pelayanan -->

@@ -65,6 +65,38 @@ class InformasiController extends Controller
         $informasi = Informasi::first();
 
         if ($informasi) {
+            // Bandingkan foto lama dengan foto baru di tiap section untuk menghapus file dari storage jika dihapus
+            foreach ($photoKeys as $section => $key) {
+                $oldSectionData = $informasi->{$section};
+                if (is_string($oldSectionData)) {
+                    $oldSectionData = json_decode($oldSectionData, true) ?? [];
+                }
+                $oldPaths = [];
+                if (is_array($oldSectionData)) {
+                    foreach ($oldSectionData as $oldItem) {
+                        $p = $oldItem[$key] ?? $oldItem['foto'] ?? null;
+                        if (! empty($p) && is_string($p)) {
+                            $oldPaths[] = $this->mediaService->cleanPath($p);
+                        }
+                    }
+                }
+
+                $newPaths = [];
+                if (isset($validated[$section]) && is_array($validated[$section])) {
+                    foreach ($validated[$section] as $newItem) {
+                        $p = $newItem[$key] ?? null;
+                        if (! empty($p) && is_string($p)) {
+                            $newPaths[] = $this->mediaService->cleanPath($p);
+                        }
+                    }
+                }
+
+                $removed = array_diff(array_unique($oldPaths), array_unique($newPaths));
+                foreach ($removed as $removedPath) {
+                    $this->mediaService->deleteMedia($removedPath);
+                }
+            }
+
             $informasi->update($validated);
         } else {
             Informasi::create($validated);

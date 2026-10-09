@@ -186,7 +186,7 @@ const stringKeywords = computed(() => {
 
                                 <!-- Konten Berita -->
                                 <div
-                                    class="text-slate-700 text-sm sm:text-base leading-relaxed max-w-none prose"
+                                    class="text-slate-900 text-sm sm:text-base leading-relaxed max-w-none rich-text-content prose break-words [&_p]:my-2.5 [&_p]:leading-relaxed [&_h1]:text-2xl [&_h1]:font-black [&_h1]:text-slate-900 [&_h1]:mt-5 [&_h1]:mb-2 [&_h1]:tracking-tight [&_h2]:text-xl [&_h2]:font-extrabold [&_h2]:text-slate-900 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-slate-800 [&_h3]:mt-3 [&_h3]:mb-1.5 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:my-3 [&_ul_li]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:my-3 [&_ol_li]:my-1 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-600 [&_blockquote]:bg-blue-50/40 [&_blockquote]:py-2 [&_blockquote]:px-4 [&_blockquote]:rounded-r-xl [&_blockquote]:italic [&_blockquote]:my-4 [&_blockquote]:text-slate-700 [&_table]:w-full [&_table]:border-collapse [&_table]:border [&_table]:border-slate-300 [&_table]:my-4 [&_th]:border [&_th]:border-slate-300 [&_th]:p-2.5 [&_th]:bg-slate-100 [&_th]:font-bold [&_th]:text-xs [&_th]:text-slate-700 [&_td]:border [&_td]:border-slate-300 [&_td]:p-2.5 [&_td]:text-xs [&_td]:text-slate-600 [&_a]:text-blue-600 [&_a]:underline [&_a]:font-semibold [&_a:hover]:text-blue-800 [&_hr]:border-t [&_hr]:border-slate-200 [&_hr]:my-6 [&_img]:rounded-2xl [&_img]:border [&_img]:border-slate-200 [&_img]:shadow-xs [&_img]:my-4 [&_img]:max-w-full"
                                     v-html="berita.konten_berita"
                                 ></div>
 

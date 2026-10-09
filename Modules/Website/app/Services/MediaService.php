@@ -145,34 +145,62 @@ class MediaService
     /**
      * Hapus file hasil konversi dan file aslinya di disk public jika ada.
      */
-    public function deleteMedia(?string $path): void
+    public function deleteMedia(mixed $path): void
     {
-        if (!$path || str_starts_with($path, 'http')) {
+        if (!$path) {
             return;
         }
 
-        $disk = Storage::disk('public');
-        $path = trim($path, '/');
-
-        // Hapus file utama
-        if ($disk->exists($path)) {
-            $disk->delete($path);
+        if (is_array($path)) {
+            foreach ($path as $p) {
+                $this->deleteMedia($p);
+            }
+            return;
         }
 
-        // Cari dan hapus file asli yang tersimpan di subfolder /original
-        $dir = dirname($path);
-        $filenameWithoutExt = pathinfo($path, PATHINFO_FILENAME);
-        $originalFolder = "{$dir}/original";
+        if (is_string($path)) {
+            $trimmed = trim($path);
+            if ((str_starts_with($trimmed, '[') && str_ends_with($trimmed, ']')) || (str_starts_with($trimmed, '{') && str_ends_with($trimmed, '}'))) {
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $p) {
+                        $this->deleteMedia($p);
+                    }
+                    return;
+                }
+            }
 
-        if ($disk->exists($originalFolder)) {
-            $files = $disk->files($originalFolder);
-            foreach ($files as $f) {
-                if (str_starts_with(basename($f), $filenameWithoutExt)) {
-                    $disk->delete($f);
+            if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+                return;
+            }
+
+            $disk = Storage::disk('public');
+            $cleanPath = $this->cleanPath($trimmed);
+            if (!$cleanPath) {
+                return;
+            }
+
+            // Hapus file utama
+            if ($disk->exists($cleanPath)) {
+                $disk->delete($cleanPath);
+            }
+
+            // Cari dan hapus file asli yang tersimpan di subfolder /original
+            $dir = dirname($cleanPath);
+            $filenameWithoutExt = pathinfo($cleanPath, PATHINFO_FILENAME);
+            $originalFolder = $dir === '.' ? 'original' : "{$dir}/original";
+
+            if ($disk->exists($originalFolder)) {
+                $files = $disk->files($originalFolder);
+                foreach ($files as $f) {
+                    if (str_starts_with(basename($f), $filenameWithoutExt)) {
+                        $disk->delete($f);
+                    }
                 }
             }
         }
     }
+
 
     /**
      * Konversi gambar lokal ke format AVIF menggunakan PHP GD.

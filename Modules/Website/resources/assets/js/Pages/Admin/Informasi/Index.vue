@@ -207,9 +207,11 @@ const triggerFileUpload = (sectionId, idx, key) => {
             }
         } catch (err) {
             console.error("Upload failed", err);
-            alert(
-                "Gagal mengunggah gambar. Pastikan ukuran file tidak melebihi 20MB.",
-            );
+            const errMsg =
+                err.response?.data?.errors?.file?.[0] ||
+                err.response?.data?.message ||
+                "Gagal mengunggah gambar. Pastikan ukuran file tidak melebihi 20MB dan format gambar valid.";
+            alert(errMsg);
         } finally {
             uploadingKeys.value[uploadId] = false;
         }
