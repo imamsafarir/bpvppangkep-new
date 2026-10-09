@@ -1,3 +1,8 @@
+# Tambahkan MIME type untuk file ESM (.mjs) agar dibaca sebagai JavaScript
+<IfModule mod_mime.c>
+    AddType text/javascript .mjs
+</IfModule>
+
 <IfModule mod_deflate.c>
     # Compress HTML, CSS, JavaScript, Text, XML and fonts
     AddOutputFilterByType DEFLATE application/javascript
