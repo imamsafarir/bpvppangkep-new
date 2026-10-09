@@ -5,16 +5,26 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = __DIR__ . '/storage/framework/maintenance.php')) {
+// Deteksi otomatis lokasi folder project Laravel
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    // Jalur untuk LOKAL (atau jika file berada di bpvppangkep-new/public)
+    $projectDir = __DIR__ . '/..';
+} else {
+    // Jalur untuk CPANEL (saat file disalin ke public_html)
+    $projectDir = __DIR__ . '/../bpvppangkep-new';
+}
+
+// 1. Cek Maintenance Mode
+if (file_exists($maintenance = $projectDir . '/storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
-// Register the Composer autoloader...
-require __DIR__ . '/vendor/autoload.php';
+// 2. Autoload Composer
+require $projectDir . '/vendor/autoload.php';
 
-// Bootstrap Laravel and handle the request...
+// 3. Bootstrap Laravel
 /** @var Application $app */
-$app = require_once __DIR__ . '/bootstrap/app.php';
+$app = require_once $projectDir . '/bootstrap/app.php';
 
+// 4. Jalankan Aplikasi
 $app->handleRequest(Request::capture());
