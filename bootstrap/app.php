@@ -6,6 +6,14 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
+    ->registered(function ($app) {
+        // Cek apakah folder public_html ada di luar folder project (cPanel)
+        $cpanelPublic = dirname(__DIR__) . '/../public_html';
+
+        if (is_dir($cpanelPublic)) {
+            $app->usePublicPath($cpanelPublic);
+        }
+    })
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
         commands: __DIR__ . '/../routes/console.php',
