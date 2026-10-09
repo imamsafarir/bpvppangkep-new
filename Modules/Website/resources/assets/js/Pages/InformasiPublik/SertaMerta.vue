@@ -20,23 +20,63 @@ const getStorageUrl = (path) => {
           : `/storage/${path}`;
 };
 
+const stripHtml = (html) => {
+    if (!html) return "";
+    let text = html.replace(/<script[^>]*>([\S\s]*?)<\/script>/gmi, "");
+    text = text.replace(/<style[^>]*>([\S\s]*?)<\/style>/gmi, "");
+    text = text.replace(/<[^>]+>/gm, " ");
+    text = text
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">");
+    return text.replace(/\s+/g, " ").trim();
+};
+
+const selectedDoc = ref(null);
+const isDetailModalOpen = ref(false);
+
+const openDetailModal = (item) => {
+    selectedDoc.value = item;
+    isDetailModalOpen.value = true;
+};
+
+const closeDetailModal = () => {
+    selectedDoc.value = null;
+    isDetailModalOpen.value = false;
+};
+
 const filteredItems = computed(() => {
-    let list = (props.dokumen || []).map((item) => ({
-        id: item.id,
-        nama: item.nama_dokumen,
-        deskripsi: item.deskripsi || item.deskripsi_singkat || "-",
-        tanggal_raw: item.created_at ? new Date(item.created_at).getTime() : 0,
-        tanggal_formatted: item.tanggal_formatted || item.created_at || "-",
-        url_lihat: getStorageUrl(item.file_path),
-        url_unduh: item.download_url || "/informasi-publik/download/" + item.id,
-    }));
+    let list = (props.dokumen || []).map((item) => {
+        const rawDeskripsi = item.deskripsi || item.deskripsi_singkat || "";
+        const cleanDeskripsi = stripHtml(rawDeskripsi);
+        return {
+            id: item.id,
+            nama: item.nama_dokumen,
+            deskripsi_raw: rawDeskripsi,
+            deskripsi_clean: cleanDeskripsi,
+            deskripsi_preview:
+                cleanDeskripsi.length > 130
+                    ? cleanDeskripsi.substring(0, 130) + "..."
+                    : cleanDeskripsi,
+            has_rich_content:
+                Boolean(rawDeskripsi) &&
+                (rawDeskripsi.includes("<") || cleanDeskripsi.length > 130),
+            tanggal_raw: item.created_at ? new Date(item.created_at).getTime() : 0,
+            tanggal_formatted: item.tanggal_formatted || item.created_at || "-",
+            url_lihat: getStorageUrl(item.file_path),
+            url_unduh: item.download_url || "/informasi-publik/download/" + item.id,
+        };
+    });
 
     if (search.value.trim()) {
         const q = search.value.toLowerCase();
         list = list.filter(
             (item) =>
                 (item.nama && item.nama.toLowerCase().includes(q)) ||
-                (item.deskripsi && item.deskripsi.toLowerCase().includes(q)),
+                (item.deskripsi_clean && item.deskripsi_clean.toLowerCase().includes(q)),
         );
     }
 
@@ -149,16 +189,28 @@ const filteredItems = computed(() => {
                                     >
                                         {{ index + 1 }}
                                     </td>
-                                    <td class="py-4 px-6 space-y-0.5">
-                                        <div class="font-bold text-slate-900">
+                                    <td class="py-4 px-6 space-y-1">
+                                        <div class="font-bold text-slate-900 text-sm leading-snug">
                                             {{ item.nama }}
                                         </div>
-                                        <div class="text-[11px] text-slate-400">
-                                            {{ item.deskripsi }}
+                                        <div v-if="item.deskripsi_clean" class="text-xs text-slate-500 leading-relaxed">
+                                            {{ item.deskripsi_preview }}
+                                            <button
+                                                v-if="item.has_rich_content"
+                                                type="button"
+                                                @click="openDetailModal(item)"
+                                                class="inline-flex items-center gap-1 ml-1 text-blue-600 hover:text-blue-700 font-bold hover:underline cursor-pointer"
+                                            >
+                                                <span>Baca Selengkapnya</span>
+                                                <i class="fas fa-arrow-right text-[9px]"></i>
+                                            </button>
+                                        </div>
+                                        <div v-else class="text-xs text-slate-400 italic">
+                                            Tidak ada deskripsi tambahan
                                         </div>
                                     </td>
                                     <td
-                                        class="py-4 px-6 text-slate-500 font-medium"
+                                        class="py-4 px-6 text-slate-500 font-medium whitespace-nowrap"
                                     >
                                         {{ item.tanggal_formatted }}
                                     </td>
@@ -166,10 +218,21 @@ const filteredItems = computed(() => {
                                         <div
                                             class="flex items-center justify-center gap-2"
                                         >
+                                            <button
+                                                v-if="item.has_rich_content"
+                                                type="button"
+                                                @click="openDetailModal(item)"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-bold transition-all text-[11px]"
+                                                title="Lihat Keterangan Rinci"
+                                            >
+                                                <i class="fas fa-file-alt text-[10px]"></i>
+                                                Detail
+                                            </button>
                                             <a
+                                                v-if="item.url_lihat"
                                                 :href="item.url_lihat"
                                                 target="_blank"
-                                                class="inline-flex items-center gap-1 px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold transition-all text-[11px]"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold transition-all text-[11px]"
                                             >
                                                 <i
                                                     class="fas fa-eye text-[10px]"
@@ -177,8 +240,9 @@ const filteredItems = computed(() => {
                                                 Lihat
                                             </a>
                                             <a
+                                                v-if="item.url_unduh"
                                                 :href="item.url_unduh"
-                                                class="inline-flex items-center gap-1 px-2 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg font-bold transition-all text-[11px]"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all text-[11px] shadow-2xs"
                                             >
                                                 <i
                                                     class="fas fa-download text-[10px]"
@@ -215,5 +279,79 @@ const filteredItems = computed(() => {
                 </div>
             </div>
         </main>
+
+        <!-- MODAL DETAIL DOKUMEN & DESKRIPSI LENGKAP -->
+        <div
+            v-if="isDetailModalOpen && selectedDoc"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+            @click.self="closeDetailModal"
+        >
+            <div
+                class="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
+            >
+                <div class="p-6 border-b border-slate-100 flex items-start justify-between gap-4 bg-slate-50/50">
+                    <div class="space-y-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
+                            Informasi Publik
+                        </span>
+                        <h3 class="text-base sm:text-lg font-black text-slate-900 leading-snug">
+                            {{ selectedDoc.nama }}
+                        </h3>
+                        <p class="text-xs text-slate-400">
+                            Diunggah pada: {{ selectedDoc.tanggal_formatted }}
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        @click="closeDetailModal"
+                        class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+                    >
+                        <i class="fas fa-times text-sm"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Keterangan & Uraian Dokumen
+                        </h4>
+                        <!-- Render HTML Rich Text Content -->
+                        <div
+                            class="rich-text-content prose prose-slate max-w-none text-xs sm:text-sm text-slate-700 bg-slate-50/60 p-4 rounded-2xl border border-slate-100"
+                            v-html="selectedDoc.deskripsi_raw || '<p class=\'text-slate-400 italic\'>Tidak ada deskripsi tambahan.</p>'"
+                        ></div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <button
+                        type="button"
+                        @click="closeDetailModal"
+                        class="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                        Tutup
+                    </button>
+                    <div class="flex items-center gap-2">
+                        <a
+                            v-if="selectedDoc.url_lihat"
+                            :href="selectedDoc.url_lihat"
+                            target="_blank"
+                            class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                        >
+                            <i class="fas fa-eye text-xs"></i>
+                            Buka Berkas
+                        </a>
+                        <a
+                            v-if="selectedDoc.url_unduh"
+                            :href="selectedDoc.url_unduh"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                        >
+                            <i class="fas fa-download text-xs"></i>
+                            Unduh Dokumen
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </AppLayout>
 </template>

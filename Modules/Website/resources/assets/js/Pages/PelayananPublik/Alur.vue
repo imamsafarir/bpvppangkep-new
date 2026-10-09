@@ -1,11 +1,19 @@
 <script setup>
 import { Head, Link } from "@inertiajs/vue3";
+import { ref } from "vue";
 import AppLayout from "../../Layouts/AppLayout.vue";
+import PdfRenderer from "../../Components/PdfRenderer.vue";
 
 const props = defineProps({
     settings: { type: Object, default: () => ({}) },
     pelayanan: { type: Object, default: () => ({}) },
 });
+
+const isFullscreen = ref(false);
+
+const toggleFullscreen = () => {
+    isFullscreen.value = !isFullscreen.value;
+};
 
 const getStorageUrl = (path) => {
     if (!path) return "";
@@ -14,6 +22,12 @@ const getStorageUrl = (path) => {
         : path.startsWith("/")
           ? path
           : `/storage/${path}`;
+};
+
+const getPdfUrl = (path) => {
+    const base = getStorageUrl(path);
+    if (!base) return "";
+    return `${base}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
 };
 
 const isPdfFile = (path) => {
@@ -127,6 +141,14 @@ const hasMainAlur = () => {
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            @click="toggleFullscreen"
+                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                                        >
+                                            <i class="fas fa-expand text-[10px]"></i>
+                                            Layar Penuh
+                                        </button>
                                         <a
                                             :href="
                                                 getStorageUrl(
@@ -157,18 +179,13 @@ const hasMainAlur = () => {
                                         </a>
                                     </div>
                                 </div>
-                                <div
-                                    class="w-full bg-slate-100 rounded-xl overflow-hidden min-h-[500px] h-[750px] sm:h-[900px] border border-slate-200/60"
-                                >
-                                    <iframe
-                                        :src="
-                                            getStorageUrl(
-                                                pelayanan.foto_alur_pelayanan,
-                                            ) + '#toolbar=1'
-                                        "
-                                        class="w-full h-full border-0 rounded-xl"
-                                        title="Bagan Alur Pelayanan"
-                                    ></iframe>
+
+                                <!-- Embed PDF Native Dynamic Renderer -->
+                                <div class="w-full">
+                                    <PdfRenderer
+                                        :url="getStorageUrl(pelayanan.foto_alur_pelayanan)"
+                                        title="Bagan Alur Prosedur Pelayanan"
+                                    />
                                 </div>
                             </div>
 

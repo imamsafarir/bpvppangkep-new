@@ -510,7 +510,7 @@ const sections = [
                                 >
                                     <iframe
                                         v-if="isPdf(strukturPreview)"
-                                        :src="strukturPreview"
+                                        :src="strukturPreview + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'"
                                         class="h-80 w-full rounded-xl border border-slate-200 bg-white"
                                         title="Bagan Struktur PDF"
                                     ></iframe>

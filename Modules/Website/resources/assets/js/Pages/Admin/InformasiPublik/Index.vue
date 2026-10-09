@@ -453,45 +453,48 @@ const selectKategori = (k) => {
 
         <!-- MODAL DIALOG -->
         <Dialog :open="isDialogOpen" @update:open="isDialogOpen = $event">
-            <DialogContent class="sm:max-w-3xl max-h-[92vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle
+            <DialogContent class="sm:max-w-4xl w-[95vw] max-h-[92vh] p-0 flex flex-col overflow-hidden">
+                <DialogHeader class="px-6 py-4 border-b border-slate-100 shrink-0">
+                    <DialogTitle class="text-base font-bold text-slate-900"
                         >{{ editItem ? "Edit" : "Tambah" }} Dokumen
                         PPID</DialogTitle
                     >
                 </DialogHeader>
 
-                <form @submit.prevent="submit" class="space-y-4 pt-2">
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-slate-700"
-                            >Kategori Informasi</label
-                        >
-                        <select
-                            v-model="form.kategori"
-                            class="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                            required
-                        >
-                            <option value="">Pilih kategori...</option>
-                            <option
-                                v-for="k in KATEGORI_OPTIONS"
-                                :key="k"
-                                :value="k"
-                            >
-                                {{ k }}
-                            </option>
-                        </select>
-                    </div>
+                <form @submit.prevent="submit" class="flex flex-col flex-1 overflow-hidden min-h-0">
+                    <div class="space-y-4 p-6 overflow-y-auto flex-1">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-700"
+                                    >Kategori Informasi</label
+                                >
+                                <select
+                                    v-model="form.kategori"
+                                    class="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                                    required
+                                >
+                                    <option value="">Pilih kategori...</option>
+                                    <option
+                                        v-for="k in KATEGORI_OPTIONS"
+                                        :key="k"
+                                        :value="k"
+                                    >
+                                        {{ k }}
+                                    </option>
+                                </select>
+                            </div>
 
-                    <div class="space-y-1.5">
-                        <label class="text-xs font-bold text-slate-700"
-                            >Nama Dokumen</label
-                        >
-                        <Input
-                            v-model="form.nama_dokumen"
-                            placeholder="Contoh: Rencana Kerja dan Anggaran (RKA) 2025"
-                            required
-                        />
-                    </div>
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-700"
+                                    >Nama Dokumen</label
+                                >
+                                <Input
+                                    v-model="form.nama_dokumen"
+                                    placeholder="Contoh: Rencana Kerja dan Anggaran (RKA) 2025"
+                                    required
+                                />
+                            </div>
+                        </div>
 
                     <!-- Dokumen File / URL Tabs -->
                     <div class="space-y-2">
@@ -677,33 +680,34 @@ const selectKategori = (k) => {
                         >
                         <RichTextEditor
                             v-model="form.deskripsi"
-                            min-height="160px"
+                            min-height="220px"
                             placeholder="Keterangan lengkap dokumen seperti di Microsoft Word..."
                             upload-folder="website/informasi-publik/konten"
                         />
                     </div>
+                </div>
 
-                    <DialogFooter class="pt-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            @click="closeDialog"
-                            >Batal</Button
-                        >
-                        <Button
-                            type="submit"
-                            class="bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
-                            :loading="isSubmitting"
-                        >
-                            {{
-                                isSubmitting
-                                    ? "Menyimpan..."
-                                    : (editItem ? "Perbarui Dokumen" : "Simpan Dokumen")
-                            }}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                <DialogFooter class="px-6 py-3.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="closeDialog"
+                        >Batal</Button
+                    >
+                    <Button
+                        type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white shadow-2xs"
+                        :loading="isSubmitting"
+                    >
+                        {{
+                            isSubmitting
+                                ? "Menyimpan..."
+                                : (editItem ? "Perbarui Dokumen" : "Simpan Dokumen")
+                        }}
+                    </Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
+    </Dialog>
     </DashboardLayout>
 </template>

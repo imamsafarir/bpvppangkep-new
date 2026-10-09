@@ -1263,7 +1263,7 @@ const submit = () => {
                                                         :src="
                                                             getStorageUrl(
                                                                 item.file_maklumat,
-                                                            ) + '#toolbar=1'
+                                                            ) + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'
                                                         "
                                                         class="w-full h-full border-0 rounded-xl bg-white"
                                                         title="Pratinjau PDF Maklumat"
@@ -1843,7 +1843,7 @@ const submit = () => {
                                                         :src="
                                                             getStorageUrl(
                                                                 item.file_standar,
-                                                            ) + '#toolbar=1'
+                                                            ) + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'
                                                         "
                                                         class="w-full h-full border-0 rounded-xl bg-white"
                                                         title="Pratinjau PDF Standar"
@@ -2082,7 +2082,7 @@ const submit = () => {
                                         >
                                             <iframe
                                                 :src="
-                                                    alurPreview + '#toolbar=1'
+                                                    alurPreview + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH'
                                                 "
                                                 class="w-full h-full border-0 rounded-xl bg-white"
                                                 title="Pratinjau Bagan Alur PDF"

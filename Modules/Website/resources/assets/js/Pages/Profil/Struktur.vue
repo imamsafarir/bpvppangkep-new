@@ -1,11 +1,19 @@
 <script setup>
 import { Head, Link } from "@inertiajs/vue3";
+import { ref } from "vue";
 import AppLayout from "../../Layouts/AppLayout.vue";
+import PdfRenderer from "../../Components/PdfRenderer.vue";
 
 const props = defineProps({
     settings: { type: Object, default: () => ({}) },
     profil: { type: Object, default: () => ({}) },
 });
+
+const isFullscreen = ref(false);
+
+const toggleFullscreen = () => {
+    isFullscreen.value = !isFullscreen.value;
+};
 
 const getStorageUrl = (path) => {
     if (!path) return "";
@@ -14,6 +22,12 @@ const getStorageUrl = (path) => {
         : path.startsWith("/")
           ? path
           : `/storage/${path}`;
+};
+
+const getPdfUrl = (path) => {
+    const base = getStorageUrl(path);
+    if (!base) return "";
+    return `${base}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`;
 };
 
 const isPdf = (path) => {
@@ -59,34 +73,39 @@ const isPdf = (path) => {
                                 Struktur Organisasi Balai
                             </h1>
                         </div>
-                        <a
-                            v-if="profil && profil.struktur_organisasi"
-                            :href="getStorageUrl(profil.struktur_organisasi)"
-                            target="_blank"
-                            class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 text-center"
-                        >
-                            <i class="fas fa-download mr-1"></i> Unduh Dokumen
-                            Bagan
-                        </a>
+                        <div class="flex items-center gap-2">
+                            <button
+                                v-if="profil && profil.struktur_organisasi && isPdf(profil.struktur_organisasi)"
+                                type="button"
+                                @click="toggleFullscreen"
+                                class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all shrink-0 text-center"
+                            >
+                                <i class="fas fa-expand mr-1.5 text-[10px]"></i> Layar Penuh
+                            </button>
+                            <a
+                                v-if="profil && profil.struktur_organisasi"
+                                :href="getStorageUrl(profil.struktur_organisasi)"
+                                target="_blank"
+                                class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all shadow-xs shrink-0 text-center"
+                            >
+                                <i class="fas fa-download mr-1"></i> Unduh Dokumen
+                                Bagan
+                            </a>
+                        </div>
                     </div>
 
                     <div
-                        class="flex justify-center bg-slate-50/50 rounded-2xl border border-slate-100 p-4"
+                        class="flex justify-center bg-slate-50/50 rounded-2xl border border-slate-100 p-2 sm:p-4"
                     >
                         <template v-if="profil && profil.struktur_organisasi">
                             <div
                                 v-if="isPdf(profil.struktur_organisasi)"
-                                class="w-full min-h-[600px] h-[850px] rounded-xl overflow-hidden border border-slate-200 shadow-xs"
+                                class="w-full"
                             >
-                                <iframe
-                                    :src="
-                                        getStorageUrl(
-                                            profil.struktur_organisasi,
-                                        ) + '#toolbar=1'
-                                    "
-                                    class="w-full h-full border-0 rounded-xl bg-white"
-                                    title="Bagan Struktur Organisasi"
-                                ></iframe>
+                                <PdfRenderer
+                                    :url="getStorageUrl(profil.struktur_organisasi)"
+                                    title="Bagan Struktur Organisasi BPVP Pangkep"
+                                />
                             </div>
                             <img
                                 v-else
