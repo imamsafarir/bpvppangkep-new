@@ -3,8 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "dev": "vite",
         "build": "vite build",
-        "dev": "vite"
+        "deploy": "vite build && cp -r public/* ../public_html/ && php artisan optimize:clear"
     },
     "dependencies": {
         "@fontsource/opendyslexic": "^5.3.0",
